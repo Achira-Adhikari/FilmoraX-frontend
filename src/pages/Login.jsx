@@ -5,6 +5,7 @@ import { Film, Mail, Lock, Chrome } from 'lucide-react';
 import { api } from '../services/api';
 import { useStore } from '../store/useStore';
 import { Button } from '../components/Button';
+import { userLogin } from '../services/authService';
 
 export const Login = () => {
   const [email, setEmail] = useState('');
@@ -14,17 +15,48 @@ export const Login = () => {
   const navigate = useNavigate();
   const setUser = useStore((state) => state.setUser);
 
-  const handleEmailLogin = async (e) => {
-    e.preventDefault();
+  const handleEmailLogin = async () => {
+    if (!email || !password) {
+      setError("Email and password are required");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
     setError('');
     setLoading(true);
 
     try {
-      const res = await api.user.login(email, password);
-      setUser(res.data);
+      const payload = { email, password };
+
+      const res = await userLogin(payload);
+
+      const userData = res?.data?.user || res?.user || res;
+
+      if (!userData) {
+        throw new Error("Invalid login response");
+      }
+
+      // Zustand update
+      setUser(userData);
+
+      // Navigate after success
       navigate('/');
+
     } catch (err) {
-      setError('Invalid email or password');
+      console.error("Login error:", err);
+
+      // better error handling
+      const message =
+        err?.message ||
+        err?.response?.data?.message ||
+        "Invalid email or password";
+
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -89,7 +121,7 @@ export const Login = () => {
             </div>
           </div>
 
-          <form onSubmit={handleEmailLogin} className="space-y-4">
+          <div className="space-y-4">
             <div>
               <label className="block text-gray-300 mb-2 text-sm">Email</label>
               <div className="relative">
@@ -134,11 +166,12 @@ export const Login = () => {
               type="submit"
               variant="primary"
               disabled={loading}
+              onClick={handleEmailLogin}
               className="w-full"
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
-          </form>
+          </div>
 
           <p className="text-center text-gray-400 text-sm mt-6">
             Don't have an account?{' '}

@@ -7,21 +7,38 @@ export const useStore = create((set, get) => ({
   favorites: [],
   userRatings: [],
 
-  setUser: (user) => set({
-    user,
-    isAuthenticated: !!user,
-    watchlist: user?.watchlist || [],
-    favorites: user?.favorites || [],
-    userRatings: user?.ratings || []
-  }),
+  // setUser: (user) => set({
+  //   user,
+  //   isAuthenticated: !!user,
+  //   watchlist: user?.watchlist || [],
+  //   favorites: user?.favorites || [],
+  //   userRatings: user?.ratings || []
+  // }),
 
-  logout: () => set({
-    user: null,
-    isAuthenticated: false,
-    watchlist: [],
-    favorites: [],
-    userRatings: []
-  }),
+  // logout: () => set({
+  //   user: null,
+  //   isAuthenticated: false,
+  //   watchlist: [],
+  //   favorites: [],
+  //   userRatings: []
+  // }),
+
+  setUser: (user) => {
+    set({
+      user,
+      isAuthenticated: true,
+    });
+  },
+
+  logout: () => {
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("user");
+
+    set({
+      user: null,
+      isAuthenticated: false,
+    });
+  },
 
   addToWatchlist: (movieId) => set((state) => ({
     watchlist: [...state.watchlist, movieId]
