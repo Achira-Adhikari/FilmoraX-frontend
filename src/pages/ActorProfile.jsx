@@ -19,7 +19,7 @@ export const ActorProfile = () => {
         setActor(actorRes.data);
       } catch (error) {
         console.error('Error fetching actor:', error);
-      } finally {
+      } finally { 
         setLoading(false);
       }
     };
@@ -28,7 +28,7 @@ export const ActorProfile = () => {
     window.scrollTo(0, 0);
   }, [id]);
 
-  if (loading) return <DetailSkeleton />;
+  if (loading) return <DetailSkeleton/>;
   if (!actor) return <div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">Actor not found</div>;
 
   const movies = actor.filmography?.filter(f => f.type === 'movie') || [];
@@ -47,7 +47,7 @@ export const ActorProfile = () => {
               src={actor.image}
               alt={actor.name}
               className="w-full rounded-lg shadow-2xl mb-6"
-            />
+            /> 
 
             <div className="bg-gray-900 rounded-lg p-6 space-y-4">
               <h3 className="text-xl font-bold text-white">Personal Info</h3>
