@@ -1,30 +1,13 @@
 import { jwtDecode } from "jwt-decode";
 
 const TOKEN_KEY = "auth_token";
-const USER_KEY = "user";
 
 export const setToken = (token) => {
-    localStorage.setItem(TOKEN_KEY, token);
+  localStorage.setItem(TOKEN_KEY, token);
 };
 
-export const setUser = (user) => {
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
-};
-
-export const getUser = () => {
-  try {
-        const user = localStorage.getItem(USER_KEY);
-        return user ? JSON.parse(user) : null;
-    } catch (err) {
-        console.error("User parse error", err);
-        return null;
-    }
-};
-
-// Remove auth
 export const clearAuth = () => {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
+  localStorage.removeItem(TOKEN_KEY);
 };
 
 export const isTokenExpired = () => {

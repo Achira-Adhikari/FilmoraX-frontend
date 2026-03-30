@@ -1,15 +1,11 @@
 import api from "../api/api";
-import { setToken, setUser } from "../api/authorization";
-
-export const saveAuth = (data) => {
-    setToken(data.access_token);
-    setUser(data.user);
-};
+import { setToken } from "../api/authorization";
+import { useStore } from "../store/useStore";
 
 // LOGIN
 export const userLogin = async (data) => {
     try {
-        console.log(data);
+
         const response = await api.post("/auth/signin", data);
 
         const { access_token, user } = response?.data?.data || {};
@@ -18,7 +14,9 @@ export const userLogin = async (data) => {
             throw new Error("Invalid server response");
         }
 
-        saveAuth(response.data.data);
+        setToken(access_token);
+
+        useStore.getState().setUser(user);
 
         return response.data;
 
