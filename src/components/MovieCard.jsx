@@ -180,8 +180,8 @@ export const ActorCard = ({ actor }) => {
         <div className="relative w-24 h-24 md:w-32 md:h-32 mb-3">
           <div className="w-full h-full rounded-full overflow-hidden border-2 border-transparent group-hover:border-blue-500 transition-all duration-300 shadow-xl">
             <img
-              src={actor.image}
-              alt={actor.name}
+              src={actor.image_url}
+              alt={actor.full_name}
               loading="lazy"
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
               style={{ backgroundColor: '#1a1c20' }}
@@ -195,7 +195,7 @@ export const ActorCard = ({ actor }) => {
         {/* Text Section */}
         <div className="text-center w-full px-1">
           <h3 className="text-gray-100 font-bold text-xs md:text-sm line-clamp-2 group-hover:text-blue-400 transition-colors duration-300">
-            {actor.name}
+            {actor.full_name}
           </h3>
           
           {actor.character && (

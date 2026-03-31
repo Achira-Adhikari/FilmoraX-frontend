@@ -50,10 +50,18 @@ export const Login = () => {
 
         const res = await userLogin({ email, password });
 
+        const loggedUser = res.data.user;
+
         setSuccess(res.data.message || "Login successful! Redirecting...");
 
         setTimeout(() => {
-          navigate("/");
+
+          if (loggedUser?.role === "ADMIN") {
+            navigate("/admin");
+          } else {
+            navigate("/");
+          }
+
         }, 1000);
 
       }
@@ -157,7 +165,7 @@ export const Login = () => {
                     <Input icon={<Lock />} type="password" placeholder="Create Password" value={password} onChange={(e) => setPassword(e.target.value)} />
                     <Input icon={<ShieldCheck />} type="password" placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
                     <Button onClick={handleAuth} className="w-full bg-blue-600 hover:bg-blue-700 h-12 rounded-xl mt-2">
-                      {loading ? 'Starting...':'Get Started'}
+                      {loading ? 'Starting...' : 'Get Started'}
                     </Button>
                   </div>
                 </motion.div>

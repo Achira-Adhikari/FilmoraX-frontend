@@ -5,6 +5,7 @@ import { Calendar, MapPin, Film, Tv } from 'lucide-react';
 import { api } from '../services/api';
 import { MovieCard } from '../components/MovieCard';
 import { DetailSkeleton } from '../components/LoadingSkeleton';
+import { getActorById } from '../services/user/actorService';
 
 export const ActorProfile = () => {
   const { id } = useParams();
@@ -15,7 +16,7 @@ export const ActorProfile = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const actorRes = await api.actors.getById(id);
+        const actorRes = await getActorById(id);
         setActor(actorRes.data);
       } catch (error) {
         console.error('Error fetching actor:', error);
@@ -44,8 +45,8 @@ export const ActorProfile = () => {
             className="md:col-span-1"
           >
             <img
-              src={actor.image}
-              alt={actor.name}
+              src={actor.image_url}
+              alt={actor.full_name}
               className="w-full rounded-lg shadow-2xl mb-6"
             /> 
 
@@ -57,15 +58,15 @@ export const ActorProfile = () => {
                 <p className="text-white font-medium">{actor.knownFor}</p>
               </div>
 
-              {actor.birthDate && (
+              {actor.birth_date && (
                 <div>
                   <p className="text-gray-500 text-sm mb-1">Date of Birth</p>
                   <div className="flex items-center gap-2 text-white">
                     <Calendar className="w-4 h-4" />
-                    <span>{new Date(actor.birthDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                    <span>{new Date(actor.birth_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
                   </div>
                   <p className="text-gray-400 text-sm mt-1">
-                    {new Date().getFullYear() - new Date(actor.birthDate).getFullYear()} years old
+                    {new Date().getFullYear() - new Date(actor.birth_date).getFullYear()} years old
                   </p>
                 </div>
               )}
@@ -94,13 +95,13 @@ export const ActorProfile = () => {
             className="md:col-span-2"
           >
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              {actor.name}
+              {actor.full_name}
             </h1>
 
             <div className="bg-gray-900 rounded-lg p-6 mb-8">
               <h2 className="text-2xl font-bold text-white mb-4">Biography</h2>
               <p className="text-gray-300 leading-relaxed whitespace-pre-line">
-                {actor.bio}
+                {actor.biography}
               </p>
             </div>
 

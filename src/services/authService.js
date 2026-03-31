@@ -8,6 +8,8 @@ export const userLogin = async (data) => {
 
         const response = await api.post("/auth/signin", data);
 
+        console.log("hello",response);
+
         const { access_token, user } = response?.data?.data || {};
 
         if (!access_token || !user) {

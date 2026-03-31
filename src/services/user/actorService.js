@@ -1,8 +1,8 @@
 import api from "../../api/api";
 
-export const getAllMovies = async () => {
+export const getAllActors = async () => {
     try {
-        const response = await api.get("/movie");
+        const response = await api.get("/actor");
         return response.data;
 
     } catch (error) {
@@ -14,9 +14,10 @@ export const getAllMovies = async () => {
     }
 };
 
-export const getMovieById = async (id) => {
+export const getActorById = async (id) => {
     try {
-        const response = await api.get(`/movie/${id}`);
+        const response = await api.get(`/actor/${id}`);
+        console.log(response.data);
         return response.data;
 
     } catch (error) {

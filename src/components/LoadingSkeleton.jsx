@@ -12,6 +12,24 @@ export const CardSkeleton = () => {
   );
 };
 
+export const ActorCardSkeleton = () => {
+  return (
+    <div className="flex flex-col items-center min-w-[120px] max-w-[140px] animate-pulse">
+      
+      {/* Circular Image Skeleton */}
+      <div className="relative w-24 h-24 md:w-32 md:h-32 mb-3">
+        <div className="w-full h-full rounded-full bg-gray-700"></div>
+      </div>
+
+      {/* Text Skeleton */}
+      <div className="w-full px-1 flex flex-col items-center gap-2">
+        <div className="h-3 md:h-4 bg-gray-700 rounded w-3/4"></div>
+        <div className="h-2.5 md:h-3 bg-gray-700 rounded w-1/2"></div>
+      </div>
+    </div>
+  );
+};
+
 export const HeroSkeleton = () => {
   return (
     <div className="relative h-[70vh] animate-pulse">
