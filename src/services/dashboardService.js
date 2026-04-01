@@ -1,8 +1,8 @@
-import api from "../../api/api";
+import api from "../api/api";
 
-export const getAllMovies = async () => {
+export const getDashboardData = async () => {
     try {
-        const response = await api.get("/movie");
+        const response = await api.get("/dashboard");
         return response.data;
 
     } catch (error) {

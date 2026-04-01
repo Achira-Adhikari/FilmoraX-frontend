@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import Router from "../src/router/router";
 import { useStore } from "./store/useStore";
+import { Toaster } from "react-hot-toast";
 
 const App = () => {
   useEffect(() => {
@@ -12,7 +13,14 @@ const App = () => {
       useStore.getState().setUser(user);
     }
   }, []);
-  return <Router />;
+  return <>
+    <Toaster
+      position="top-center"
+      reverseOrder={false}
+    />
+
+    <Router />
+  </>;
 };
 
 export default App;

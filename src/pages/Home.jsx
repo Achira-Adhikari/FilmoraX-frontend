@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Info, ChevronLeft, ChevronRight, TrendingUp, Calendar, Star } from 'lucide-react';
@@ -6,6 +6,7 @@ import { api } from '../services/api';
 import { MovieCard, TVCard } from '../components/MovieCard';
 import { HeroSkeleton, CardSkeleton } from '../components/LoadingSkeleton';
 import { TrailerModal } from '../components/Modal';
+import { getHomeData } from '../services/homeService';
 
 // --- Hero Section Component ---
 const HeroSection = ({ movies }) => {
@@ -40,7 +41,7 @@ const HeroSection = ({ movies }) => {
             className="absolute inset-0"
           >
             <img
-              src={movie.backdrop}
+              src={movie.poster_url_landscape}
               alt={movie.title}
               className="w-full h-full object-cover object-top opacity-70 md:opacity-100"
             />
@@ -67,7 +68,7 @@ const HeroSection = ({ movies }) => {
                 {movie.title}
               </h1>
               <p className="text-gray-300 text-sm md:text-xl mb-6 md:mb-8 line-clamp-3 max-w-xl leading-relaxed">
-                {movie.plot}
+                {movie.synopsis}
               </p>
               
               <div className="flex flex-wrap gap-3 md:gap-4">
@@ -107,7 +108,7 @@ const HeroSection = ({ movies }) => {
       <TrailerModal
         isOpen={trailerOpen}
         onClose={() => setTrailerOpen(false)}
-        trailerUrl={movie.trailer}
+        trailerUrl={movie.trailer_url}
         title={movie.title}
       />
     </>
@@ -145,36 +146,40 @@ export const Home = () => {
     popular: [],
     topRated: [],
     upcoming: [],
-    trendingTV: []
+    trendingTV: [],
+    hero:[]
   });
 
-  useEffect(() => {
-    const fetchHomeData = async () => {
-      setLoading(true);
-      try {
-        const [trending, popular, topRated, upcoming, tv] = await Promise.all([
-          api.movies.getTrending(),
-          api.movies.getPopular(),
-          api.movies.getTopRated(),
-          api.movies.getUpcoming(),
-          api.tvSeries.getTrending()
-        ]);
+   const fetchHomeData = useCallback(async () => {
+    try {
+      const res = await getHomeData();
+      const {
+        trendingNow = [],
+        popularMovies = [],
+        criticsChoice = [],
+        comingSoon = [],
+        hotTvSeries = [],
+        hero = [],
+      } = res.data || {};
 
-        setData({
-          trending: trending.data || [],
-          popular: popular.data || [],
-          topRated: topRated.data || [],
-          upcoming: upcoming.data || [],
-          trendingTV: tv.data || []
-        });
-      } catch (error) {
-        console.error('Home Page Data Error:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchHomeData();
+      setData({
+        trending: trendingNow,
+        popular: popularMovies,
+        topRated: criticsChoice,
+        upcoming: comingSoon,
+        trendingTV: hotTvSeries,
+        hero,
+      });
+    } catch (error) {
+      console.error("Home Page Data Error:", error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchHomeData();
+  }, [fetchHomeData]);
 
   return (
     <div className="min-h-screen bg-gray-950 pb-20 overflow-x-hidden">
@@ -193,28 +198,36 @@ export const Home = () => {
         )}
 
         {/* Trending Section */}
-        <section className="mb-16 md:mb-24">
+        {data.trending.length > 0 && (
+          <section className="mb-16 md:mb-24">
           <SectionHeader title="Trending Now" icon={TrendingUp} />
           <MovieGrid items={data.trending} loading={loading} />
         </section>
+        )}
 
         {/* Popular Movies Section */}
-        <section className="mb-16 md:mb-24">
+        {data.popular.length > 0 && (
+          <section className="mb-16 md:mb-24">
           <SectionHeader title="Popular Movies" />
           <MovieGrid items={data.popular} loading={loading} />
         </section>
+        )}
 
         {/* TV Series Section */}
-        <section className="mb-16 md:mb-24">
+        {data.trendingTV.length > 0 && (
+          <section className="mb-16 md:mb-24">
           <SectionHeader title="Hot TV Series" />
           <MovieGrid items={data.trendingTV} type="tv" loading={loading} />
         </section>
+        )}
 
         {/* Top Rated Section */}
-        <section className="mb-16 md:mb-24">
+        {data.topRated.length > 0 && (
+          <section className="mb-16 md:mb-24">
           <SectionHeader title="Critics Choice" icon={Star} />
           <MovieGrid items={data.topRated} loading={loading} />
         </section>
+        )}
         
       </div>
     </div>

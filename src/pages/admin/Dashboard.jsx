@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Film, Tv, Users, MessageSquare, TrendingUp, Activity } from 'lucide-react';
 import { api } from '../../services/api';
+import { getDashboardData } from '../../services/dashboardService';
 
 const StatCard = ({ icon: Icon, label, value, change, color }) => {
   return (
@@ -31,25 +32,23 @@ export const AdminDashboard = () => {
   const [recentReviews, setRecentReviews] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = useCallback(async () => {
     try {
-      const [statsRes, reviewsRes] = await Promise.all([
-        api.admin.getStats(),
-        api.admin.getRecentReviews()
-      ]);
-      setStats(statsRes.data);
-      setRecentReviews(reviewsRes.data);
+      const res = await getDashboardData();
+      const { stats = {}, recentReviews = [] } = res.data || {};
+
+      setStats(stats);
+      setRecentReviews(recentReviews);
     } catch (error) {
-      console.error('Error fetching admin data:', error);
+      console.error("Error fetching admin data:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   if (loading || !stats) {
     return (
@@ -61,7 +60,7 @@ export const AdminDashboard = () => {
 
   const statCards = [
     { icon: Film, label: 'Total Movies', value: stats.totalMovies, change: 12, color: 'bg-blue-600' },
-    { icon: Tv, label: 'Total TV Series', value: stats.totalTVSeries, change: 8, color: 'bg-green-600' },
+    { icon: Tv, label: 'Total TV Series', value: stats.totalTvSeries, change: 8, color: 'bg-green-600' },
     { icon: Users, label: 'Total Actors', value: stats.totalActors, change: 15, color: 'bg-purple-600' },
     { icon: MessageSquare, label: 'Total Reviews', value: stats.totalReviews, change: 24, color: 'bg-orange-600' }
   ];
@@ -75,7 +74,7 @@ export const AdminDashboard = () => {
         </div>
         <div className="flex items-center gap-2 bg-gray-800 px-4 py-2 rounded-lg">
           <Activity className="w-5 h-5 text-green-400" />
-          <span className="text-white font-semibold">{stats.recentActivity} active users</span>
+          <span className="text-white font-semibold">{stats.activeUsers} active users</span>
         </div>
       </div>
 
@@ -93,25 +92,29 @@ export const AdminDashboard = () => {
         >
           <h2 className="text-xl font-bold text-white mb-6">Recent Reviews</h2>
           <div className="space-y-4">
-            {recentReviews.slice(0, 5).map((review) => (
-              <div key={review.id} className="bg-gray-900 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <img
-                    src={review.userAvatar}
-                    alt={review.userName}
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="text-white font-semibold truncate">{review.userName}</p>
-                      <span className="text-yellow-400 text-sm font-bold">{review.rating}/10</span>
+            {recentReviews.length === 0 ? (
+              <p className="text-gray-500 text-sm">No recent reviews.</p>
+            ) : (
+              recentReviews?.slice(0, 5).map((review) => (
+                <div key={review.id} className="bg-gray-900 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <img
+                      src={review.userAvatar}
+                      alt={review.userName}
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-white font-semibold truncate">{review.userName}</p>
+                        <span className="text-yellow-400 text-sm font-bold">{review.rating}/10</span>
+                      </div>
+                      <p className="text-gray-400 text-sm line-clamp-2">{review.content}</p>
+                      <p className="text-gray-500 text-xs mt-1">{review.date}</p>
                     </div>
-                    <p className="text-gray-400 text-sm line-clamp-2">{review.content}</p>
-                    <p className="text-gray-500 text-xs mt-1">{review.date}</p>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </motion.div>
 

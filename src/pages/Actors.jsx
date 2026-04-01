@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { ActorCard } from "../components/MovieCard";
 import { ActorCardSkeleton } from "../components/LoadingSkeleton";
-import { getAllActors } from "../services/user/actorService";
+import { getAllActors } from "../services/actorService";
 
 export const Actors = () => {
   const [actors, setActors] = useState([]);

@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Calendar, MapPin, Film, Tv } from 'lucide-react';
+import { Calendar, MapPin, Film, Tv, Clapperboard } from 'lucide-react';
 import { api } from '../services/api';
 import { MovieCard } from '../components/MovieCard';
 import { DetailSkeleton } from '../components/LoadingSkeleton';
-import { getActorById } from '../services/user/actorService';
+import { getActorById } from '../services/actorService';
 
 export const ActorProfile = () => {
   const { id } = useParams();
@@ -20,7 +20,7 @@ export const ActorProfile = () => {
         setActor(actorRes.data);
       } catch (error) {
         console.error('Error fetching actor:', error);
-      } finally { 
+      } finally {
         setLoading(false);
       }
     };
@@ -29,11 +29,11 @@ export const ActorProfile = () => {
     window.scrollTo(0, 0);
   }, [id]);
 
-  if (loading) return <DetailSkeleton/>;
+  if (loading) return <DetailSkeleton />;
   if (!actor) return <div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">Actor not found</div>;
 
-  const movies = actor.filmography?.filter(f => f.type === 'movie') || [];
-  const tvShows = actor.filmography?.filter(f => f.type === 'tv') || [];
+  const actedMovies = actor.acted_movies || [];
+  const directedMovies = actor.directed_movies || [];
 
   return (
     <div className="min-h-screen bg-gray-950 pt-20">
@@ -48,7 +48,7 @@ export const ActorProfile = () => {
               src={actor.image_url}
               alt={actor.full_name}
               className="w-full rounded-lg shadow-2xl mb-6"
-            /> 
+            />
 
             <div className="bg-gray-900 rounded-lg p-6 space-y-4">
               <h3 className="text-xl font-bold text-white">Personal Info</h3>
@@ -71,19 +71,19 @@ export const ActorProfile = () => {
                 </div>
               )}
 
-              {actor.birthPlace && (
+              {actor.nationality && (
                 <div>
-                  <p className="text-gray-500 text-sm mb-1">Place of Birth</p>
+                  <p className="text-gray-500 text-sm mb-1">Nationality</p>
                   <div className="flex items-center gap-2 text-white">
                     <MapPin className="w-4 h-4" />
-                    <span>{actor.birthPlace}</span>
+                    <span>{actor.nationality}</span>
                   </div>
                 </div>
               )}
 
               <div>
-                <p className="text-gray-500 text-sm mb-1">Known Credits</p>
-                <p className="text-white font-medium">{actor.filmography?.length || 0}</p>
+                <p className="text-gray-500 text-sm mb-1">Total Credits</p>
+                <p className="text-white font-medium">{actedMovies.length + directedMovies.length || 0}</p>
               </div>
             </div>
           </motion.div>
@@ -105,15 +105,15 @@ export const ActorProfile = () => {
               </p>
             </div>
 
-            {movies.length > 0 && (
+            {actedMovies.length > 0 && (
               <div className="mb-8">
-                <div className="flex items-center gap-2 mb-6">
+                {/* <div className="flex items-center gap-2 mb-6">
                   <Film className="w-6 h-6 text-blue-600" />
-                  <h2 className="text-2xl font-bold text-white">Movies</h2>
-                  <span className="text-gray-400">({movies.length})</span>
-                </div>
+                  <h2 className="text-2xl font-bold text-white">Acted Movies</h2>
+                  <span className="text-gray-400">({actedMovies.length})</span>
+                </div> */}
                 <div className="space-y-3">
-                  {movies.map((credit) => (
+                  {/* {actedMovies.map((credit) => (
                     <div
                       key={credit.id}
                       className="bg-gray-900 rounded-lg p-4 hover:bg-gray-800 transition-colors"
@@ -126,12 +126,43 @@ export const ActorProfile = () => {
                         <span className="text-gray-500 font-medium">{credit.year}</span>
                       </div>
                     </div>
-                  ))}
+                  ))} */}
+                  {actedMovies.length > 0 && (
+                    <div className="mb-10">
+                      <div className="flex items-center gap-2 mb-6">
+                        <Film className="w-6 h-6 text-blue-500" />
+                        <h2 className="text-2xl font-bold text-white">
+                          Acted Movies ({actedMovies.length})
+                        </h2>
+                      </div>
+
+                      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {actedMovies.map((movie) => (
+                          <div
+                            key={movie.id}
+                            className="bg-gray-900 rounded-xl overflow-hidden hover:bg-gray-800 transition"
+                          >
+                            <img
+                              src={movie.poster_url_portrait}
+                              alt={movie.title}
+                              className="w-full h-60 object-cover"
+                            />
+                            <div className="p-4">
+                              <h3 className="text-white font-semibold">
+                                {movie.title}
+                              </h3>
+                              <p className="text-gray-400 text-sm">{movie.year}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
-            {tvShows.length > 0 && (
+            {/* {tvShows.length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-6">
                   <Tv className="w-6 h-6 text-green-600" />
@@ -150,6 +181,37 @@ export const ActorProfile = () => {
                           <p className="text-gray-400 text-sm">as {credit.character}</p>
                         </div>
                         <span className="text-gray-500 font-medium">{credit.year}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )} */}
+            {directedMovies.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-6">
+                  <Clapperboard className="w-6 h-6 text-green-500" />
+                  <h2 className="text-2xl font-bold text-white">
+                    Directed Movies ({directedMovies.length})
+                  </h2>
+                </div>
+
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {directedMovies.map((movie) => (
+                    <div
+                      key={movie.id}
+                      className="bg-gray-900 rounded-xl overflow-hidden hover:bg-gray-800 transition"
+                    >
+                      <img
+                        src={movie.poster_url_portrait}
+                        alt={movie.title}
+                        className="w-full h-60 object-cover"
+                      />
+                      <div className="p-4">
+                        <h3 className="text-white font-semibold">
+                          {movie.title}
+                        </h3>
+                        <p className="text-gray-400 text-sm">{movie.year}</p>
                       </div>
                     </div>
                   ))}

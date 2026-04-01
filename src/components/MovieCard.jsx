@@ -16,7 +16,7 @@ export const MovieCard = ({ movie, showRating = true }) => {
           {/* Image Section */}
           <div className="aspect-[2/3] relative overflow-hidden">
             <img
-              src={movie.poster}
+              src={movie.poster_url_portrait}
               alt={movie.title}
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 group-hover:blur-[2px]"
               style={{ backgroundColor: "#16181d" }}
@@ -46,7 +46,7 @@ export const MovieCard = ({ movie, showRating = true }) => {
             )}
 
             {/* Upcoming Label */}
-            {movie.upcoming && (
+            {movie.release_status === "UPCOMING" && (
               <div className="absolute top-3 left-3 bg-blue-600/80 backdrop-blur-sm px-2 py-0.5 rounded text-[9px] font-bold text-white uppercase tracking-widest border border-white/10">
                 New Release
               </div>
@@ -72,9 +72,9 @@ export const MovieCard = ({ movie, showRating = true }) => {
                 <span className="text-[11px] font-semibold">{movie.year}</span>
               </div>
 
-              {movie.genres?.[0] && (
+              {movie.Genre?.[0] && (
                 <span className="text-[10px] font-bold text-gray-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md uppercase tracking-tighter">
-                  {movie.genres[0]}
+                  {movie.Genre[0].name}
                 </span>
               )}
             </div>
