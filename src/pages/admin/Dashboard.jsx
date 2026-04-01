@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Film, Tv, Users, MessageSquare, TrendingUp, Activity } from 'lucide-react';
-import { api } from '../../services/api';
 import { getDashboardData } from '../../services/dashboardService';
 
 const StatCard = ({ icon: Icon, label, value, change, color }) => {
@@ -65,6 +64,15 @@ export const AdminDashboard = () => {
     { icon: MessageSquare, label: 'Total Reviews', value: stats.totalReviews, change: 24, color: 'bg-orange-600' }
   ];
 
+  const getInitials = (name = "") => {
+    return name
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(word => word[0].toUpperCase())
+      .join("");
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
@@ -98,18 +106,16 @@ export const AdminDashboard = () => {
               recentReviews?.slice(0, 5).map((review) => (
                 <div key={review.id} className="bg-gray-900 rounded-lg p-4">
                   <div className="flex items-start gap-3">
-                    <img
-                      src={review.userAvatar}
-                      alt={review.userName}
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
+                    <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
+                      {getInitials(review.user.full_name)}
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <p className="text-white font-semibold truncate">{review.userName}</p>
+                        <p className="text-white font-semibold truncate">{review.user.full_name}</p>
                         <span className="text-yellow-400 text-sm font-bold">{review.rating}/10</span>
                       </div>
-                      <p className="text-gray-400 text-sm line-clamp-2">{review.content}</p>
-                      <p className="text-gray-500 text-xs mt-1">{review.date}</p>
+                      <p className="text-gray-400 text-sm line-clamp-2">{review.comment}</p>
+                      <p className="text-gray-500 text-xs mt-1">{new Date(review.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) || 'N/A'}</p>
                     </div>
                   </div>
                 </div>

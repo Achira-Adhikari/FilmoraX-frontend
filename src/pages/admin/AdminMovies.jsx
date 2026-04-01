@@ -364,7 +364,6 @@ const MovieForm = ({ movie, onCancel, onSuccess }) => {
             >
               <option value="FULL_MOVIE">Full Movie</option>
               <option value="SHORT_MOVIE">Short Movie</option>
-              <option value="TV_SERIES">Tv Series</option>
             </select>
           </div>
         </div>
@@ -424,8 +423,14 @@ export const AdminMovies = () => {
 
       const res = await getAllMovies();
 
-      // safe check
-      setMovies(res?.data.movies || []);
+      const allMovies = res?.data?.movies || [];
+
+      // Filter out TV_SERIES
+      const filteredMovies = allMovies.filter(
+        movie => movie.movie_type !== "TV_SERIES"
+      );
+
+      setMovies(filteredMovies);
     } catch (err) {
       console.error("Error fetching movies:", err);
       setError(
@@ -540,34 +545,48 @@ export const AdminMovies = () => {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-gray-950/50 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-              <tr><th className="px-6 py-4">Movie Info</th><th className="px-6 py-4">Director</th><th className="px-6 py-4 text-right">Actions</th></tr>
-            </thead>
-            <tbody className="divide-y divide-gray-800">
-              {filteredMovies.map((m) => (
-                <tr key={m.id} className="hover:bg-blue-600/5 group transition-all">
-                  <td className="px-6 py-4 flex items-center gap-3">
-                    {/* Table Image (මෙතැන ඇත) */}
-                    <div className="w-10 h-14 rounded bg-gray-800 overflow-hidden border border-gray-700 shadow-md">
-                      {m.poster_url_portrait ? <img src={m.poster_url_portrait} className="w-full h-full object-cover" alt="" /> : <Film className="w-full h-full p-2 text-gray-700" />}
-                    </div>
-                    <div>
-                      <p className="font-bold text-white group-hover:text-blue-400 transition-colors uppercase text-xs tracking-wide">{m.title}</p>
-                      <p className="text-[10px] text-gray-500">{m.year}</p>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-gray-400 text-sm">{m.director.full_name}</td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2">
-                      <button onClick={() => handleEdit(m)} className="p-2 text-blue-400 hover:bg-blue-400/10 rounded-lg cursor-pointer transition-all"><Edit2 size={16} /></button>
-                      <button onClick={() => handleDelete(m.id)} className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg cursor-pointer transition-all"><Trash2 size={16} /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {!loading && error && (
+            <div className="text-center text-red-500 py-10">
+              <p className="mb-4">{error}</p>
+              <button
+                onClick={fetchMovies}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+          {!error && (
+            <table className="w-full text-left">
+              <thead className="bg-gray-950/50 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                <tr><th className="px-6 py-4">Movie Info</th><th className="px-6 py-4">Director</th><th className="px-6 py-4 text-right">Actions</th></tr>
+              </thead>
+              <tbody className="divide-y divide-gray-800">
+                {filteredMovies.map((m) => (
+                  <tr key={m.id} className="hover:bg-blue-600/5 group transition-all">
+                    <td className="px-6 py-4 flex items-center gap-3">
+                      {/* Table Image (මෙතැන ඇත) */}
+                      <div className="w-10 h-14 rounded bg-gray-800 overflow-hidden border border-gray-700 shadow-md">
+                        {m.poster_url_portrait ? <img src={m.poster_url_portrait} className="w-full h-full object-cover" alt="" /> : <Film className="w-full h-full p-2 text-gray-700" />}
+                      </div>
+                      <div>
+                        <p className="font-bold text-white group-hover:text-blue-400 transition-colors uppercase text-xs tracking-wide">{m.title}</p>
+                        <p className="text-[10px] text-gray-500">{m.year}</p>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-gray-400 text-sm">{m.director.full_name}</td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => handleEdit(m)} className="p-2 text-blue-400 hover:bg-blue-400/10 rounded-lg cursor-pointer transition-all"><Edit2 size={16} /></button>
+                        <button onClick={() => handleDelete(m.id)} className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg cursor-pointer transition-all"><Trash2 size={16} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 

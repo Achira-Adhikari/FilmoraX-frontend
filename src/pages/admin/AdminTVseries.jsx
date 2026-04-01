@@ -1,135 +1,399 @@
-import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Search, Tv, Loader2, Calendar, Film, Info, Activity, Globe, Monitor } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Plus, Edit2, Trash2, Search, Tv, Loader2, Calendar, Film, Info, Activity, Globe, Monitor, User, Check, X } from 'lucide-react';
 import { api } from '../../services/api';
 import { Button } from '../../components/Button';
 import { Modal } from '../../components/Modal';
+import { addMovie, deleteMovie, getAllMovies, updateMovie } from '../../services/movieService';
+import toast from 'react-hot-toast';
+import { getAllGenre } from '../../services/genreService';
+import { getAllActors } from '../../services/actorService';
+import { motion,AnimatePresence } from 'framer-motion';
 
 // --- Form Component (Fully Responsive) ---
-const TVSeriesForm = ({ series, onSubmit, onCancel }) => {
-  const [formData, setFormData] = useState(
-    series || {
-      title: '',
-      year: new Date().getFullYear(),
-      seasons_count: 1,
-      network: '',
-      director: '',
-      plot: '',
-      genres: [],
-      poster: '',
-      trailer_url: '',
-      status: 'Ongoing'
+const TVSeriesForm = ({ series, onCancel, onSuccess }) => {
+  const [formData, setFormData] = useState({
+    title: "",
+    year: "",
+    runtime: "",
+    synopsis: "",
+    poster_url_portrait: "",
+    poster_url_landscape: "",
+    trailer_url: "",
+    release_date: "",
+    movie_type: "TV_SERIES",
+    release_status: "UPCOMING",
+    directorId: "",
+    actorIds: [],
+    genreIds: []
+  });
+
+  const [actorSearch, setActorSearch] = useState('');
+  const [directorSearch, setDirectorSearch] = useState(series?.director || '');
+  const [showActorTips, setShowActorTips] = useState(false);
+  const [showDirectorTips, setShowDirectorTips] = useState(false);
+  const [genres, setGenres] = useState([]);
+  const [actors, setActors] = useState([]);
+  const [loading, setLoading] = useState([]);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    if (series) {
+      setFormData(prev => ({
+        ...prev,
+        title: series.title || "",
+        year: series.year || "",
+        runtime: series.runtime || "",
+        synopsis: series.synopsis || "",
+        poster_url_portrait: series.poster_url_portrait || "",
+        poster_url_landscape: series.poster_url_landscape || "",
+        trailer_url: series.trailer_url || "",
+        release_date: series.release_date || "",
+        movie_type: series.movie_type || "",
+        release_status: series.release_status || "",
+        directorId: series.director?.id || "",
+        actorIds: series.actors?.map(a => a.id) || [],
+        genreIds: series.Genre?.map(g => g.id) || []
+      }));
+
+      // Set director search input value (text box ekata nama enne meken)
+      setDirectorSearch(series.director?.full_name || "");
     }
+  }, [series]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+
+      const [genresRes, actorsRes] = await Promise.all([
+        getAllGenre(),
+        getAllActors()
+      ]);
+
+      setGenres(genresRes.data);
+      setActors(actorsRes.data);
+
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to load initial data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSeries = async () => {
+    try {
+
+      // VALIDATION 
+
+      if (!formData.title.trim())
+        return toast.error("Please enter series title");
+
+      if (!formData.poster_url_portrait.trim())
+        return toast.error("Please enter portrait poster URL");
+
+      if (!formData.poster_url_landscape.trim())
+        return toast.error("Please enter landscape poster URL");
+
+      if (!formData.trailer_url.trim())
+        return toast.error("Please enter trailer URL");
+
+      if (!formData.year)
+        return toast.error("Please enter movie year");
+
+      if (!formData.runtime)
+        return toast.error("Please enter runtime");
+
+      if (!formData.release_date)
+        return toast.error("Please select release date");
+
+      if (!formData.directorId)
+        return toast.error("Please select director");
+
+      if (!formData.actorIds.length)
+        return toast.error("Please select at least one actor");
+
+      if (!formData.genreIds.length)
+        return toast.error("Please select at least one genre");
+
+      if (!formData.synopsis.trim())
+        return toast.error("Please enter synopsis");
+
+      // PREPARE PAYLOAD 
+
+      setLoading(true);
+
+      const basePayload = {
+        title: formData.title.trim(),
+        poster_url_portrait: formData.poster_url_portrait.trim(),
+        poster_url_landscape: formData.poster_url_landscape.trim(),
+        trailer_url: formData.trailer_url.trim(),
+
+        year: Number(formData.year),
+        runtime: Number(formData.runtime),
+
+        release_date: formData.release_date,
+        release_status: formData.release_status,
+        movie_type: 'TV_SERIES',
+
+        synopsis: formData.synopsis.trim(),
+
+        directorId: Number(formData.directorId),
+        actorIds: formData.actorIds,
+        genreIds: formData.genreIds
+      };
+
+      // UPDATE
+
+      if (series) {
+
+        const normalizedOldMovie = {
+          title: series.title,
+          poster_url_portrait: series.poster_url_portrait,
+          poster_url_landscape: series.poster_url_landscape,
+          trailer_url: series.trailer_url,
+
+          year: Number(series.year),
+          runtime: Number(series.runtime),
+
+          release_date: series.release_date,
+          release_status: series.release_status,
+          movie_type: series.movie_type,
+
+          synopsis: series.synopsis,
+
+          directorId: series.director?.id || null,
+          actorIds: series.actors?.map(a => a.id) || [],
+          genreIds: series.Genre?.map(g => g.id) || []
+        };
+
+        const payload = {};
+
+        Object.keys(basePayload).forEach(key => {
+          const newValue = basePayload[key];
+          const oldValue = normalizedOldMovie[key];
+
+          if (Array.isArray(newValue)) {
+            const sortedNew = [...newValue].sort();
+            const sortedOld = [...(oldValue || [])].sort();
+
+            if (JSON.stringify(sortedNew) !== JSON.stringify(sortedOld)) {
+              payload[key] = newValue;
+            }
+          } else if (newValue !== oldValue) {
+            payload[key] = newValue;
+          }
+        });
+
+        if (Object.keys(payload).length === 0) {
+          toast.error("No changes detected");
+          return;
+        }
+
+        await updateMovie(payload, movie.id);
+        toast.success("Series updated successfully!");
+
+      } else {
+
+        // CREATE 
+
+        await addMovie(basePayload);
+        toast.success("Series created successfully!");
+      }
+
+      onSuccess();
+
+    } catch (error) {
+      console.error(error);
+      toast.error(error?.response?.data?.message || error.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredDirectors = actors.filter(d =>
+    d.full_name.toLowerCase().includes(directorSearch.toLowerCase()) &&
+    d.id !== formData.directorId
   );
 
-  const handleImageChange = (e) => {
+  const filteredActors = actors.filter(a =>
+    a.full_name.toLowerCase().includes(actorSearch.toLowerCase()) &&
+    !formData.actorIds.includes(a.id)
+  );
+
+  const handleImageChange = (e, field) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, poster: reader.result });
-      };
+      reader.onloadend = () => setFormData(prev => ({ ...prev, [field]: reader.result }));
       reader.readAsDataURL(file);
     }
   };
 
+  const toggleGenre = (genreId) => {
+    setFormData(prev => ({
+      ...prev,
+      genreIds: prev.genreIds.includes(genreId)
+        ? prev.genreIds.filter(id => id !== genreId)
+        : [...prev.genreIds, genreId]
+    }));
+  };
+
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onSubmit(formData); }} className="space-y-4 md:space-y-5 text-white max-h-[80vh] overflow-y-auto px-1">
+    <div className="space-y-5 text-white max-h-[80vh] overflow-y-auto px-1 custom-scrollbar">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        
         {/* Title */}
         <div className="md:col-span-2">
-          <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Series Title *</label>
-          <input 
-            type="text" 
-            value={formData.title} 
-            onChange={(e) => setFormData({...formData, title: e.target.value})} 
-            className="w-full bg-gray-900 border border-gray-700 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all" 
-            placeholder="e.g. Breaking Bad"
-            required 
-          />
+          <label className="text-xs font-semibold text-gray-400 uppercase mb-1.5 block">Series Title *</label>
+          <input type="text" value={formData.title} onChange={(e) => setFormData(p => ({ ...p, title: e.target.value }))} className="w-full bg-gray-900 border border-gray-700 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" required />
         </div>
 
-        {/* Image Upload Area */}
         <div className="md:col-span-2">
-          <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Poster Image</label>
-          <div className="mt-2 flex flex-col sm:flex-row items-center gap-4 p-4 border-2 border-dashed border-gray-800 rounded-xl bg-gray-950/50">
-            {formData.poster ? (
-              <img src={formData.poster} alt="Preview" className="w-24 h-32 sm:w-20 sm:h-28 object-cover rounded-lg border border-gray-700 shadow-xl" />
-            ) : (
-              <div className="w-24 h-32 sm:w-20 sm:h-28 rounded-lg bg-gray-800 flex items-center justify-center border border-gray-700">
-                <Film className="text-gray-600" />
-              </div>
+          <label className="text-xs font-semibold text-gray-400 uppercase mb-1.5 block">Series Portrait URL *</label>
+          <input type="text" value={formData.poster_url_portrait} onChange={(e) => setFormData(p => ({ ...p, poster_url_portrait: e.target.value }))} className="w-full bg-gray-900 border border-gray-700 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" required />
+        </div>
+
+        <div className="md:col-span-2">
+          <label className="text-xs font-semibold text-gray-400 uppercase mb-1.5 block">Series Landscape URL *</label>
+          <input type="text" value={formData.poster_url_landscape} onChange={(e) => setFormData(p => ({ ...p, poster_url_landscape: e.target.value }))} className="w-full bg-gray-900 border border-gray-700 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" required />
+        </div>
+
+        <div className="md:col-span-2">
+          <label className="text-xs font-semibold text-gray-400 uppercase mb-1.5 block">Series Trailer URL *</label>
+          <input type="text" value={formData.trailer_url} onChange={(e) => setFormData(p => ({ ...p, trailer_url: e.target.value }))} className="w-full bg-gray-900 border border-gray-700 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" required />
+        </div>
+
+        {/* Director Search */}
+        <div className="md:col-span-2 relative">
+          <label className="text-xs font-semibold text-gray-400 uppercase mb-1.5 block">Director</label>
+          <div className="relative">
+            <input type="text" value={directorSearch} onChange={(e) => { setDirectorSearch(e.target.value); setShowDirectorTips(true); if (!e.target.value) setFormData(p => ({ ...p, director: '' })); }} onFocus={() => setShowDirectorTips(true)} className="w-full bg-gray-900 border border-gray-700 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" />
+            <User className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600" size={18} />
+          </div>
+          <AnimatePresence>
+            {showDirectorTips && directorSearch && filteredDirectors.length > 0 && (
+              <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute z-50 w-full mt-1 bg-gray-800 border border-gray-700 rounded-xl shadow-2xl overflow-hidden">
+                {filteredDirectors.map(d => (
+                  <div key={d.id}
+                    onClick={() => {
+                      setFormData(p => ({ ...p, directorId: d.id }));
+                      setDirectorSearch(d.full_name);
+                      setShowDirectorTips(false);
+                    }}
+                    className="p-3 hover:bg-blue-600 text-sm cursor-pointer flex justify-between">{d.full_name} <Check size={14} className="opacity-50" /></div>
+                ))}
+              </motion.div>
             )}
-            <div className="flex-1 w-full text-center sm:text-left">
-              <input 
-                type="file" 
-                accept="image/*" 
-                onChange={handleImageChange}
-                className="block w-full text-sm text-gray-400 file:mr-auto sm:file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600/10 file:text-blue-500 hover:file:bg-blue-600/20 cursor-pointer"
-              />
-              <p className="mt-2 text-[10px] text-gray-500 uppercase font-bold tracking-tighter sm:tracking-normal">Recommended: 600x900px</p>
-            </div>
+          </AnimatePresence>
+        </div>
+
+        {/* Actor Search */}
+        <div className="md:col-span-2 relative">
+          <label className="text-xs font-semibold text-gray-400 uppercase mb-1.5 block">Cast / Actors</label>
+          <div className="flex flex-wrap gap-2 p-2 bg-gray-900 border border-gray-700 rounded-xl min-h-[52px] focus-within:ring-2 focus-within:ring-blue-500">
+            {formData.actorIds.map(id => {
+              const actor = actors.find(a => a.id === id);
+              return (
+                <span key={id} className="...">
+                  {actor?.full_name}
+                  <X
+                    onClick={() =>
+                      setFormData(p => ({
+                        ...p,
+                        actorIds: p.actorIds.filter(aid => aid !== id)
+                      }))
+                    }
+                  />
+                </span>
+              );
+            })}
+            <input type="text" value={actorSearch} onChange={(e) => { setActorSearch(e.target.value); setShowActorTips(true); }} onFocus={() => setShowActorTips(true)} placeholder="Search and add..." className="flex-1 min-w-[120px] bg-transparent border-none outline-none text-sm p-1 text-white" />
+          </div>
+          <AnimatePresence>
+            {showActorTips && actorSearch && filteredActors.length > 0 && (
+              <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute z-50 w-full mt-1 bg-gray-800 border border-gray-700 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
+                {filteredActors.map(a => (
+                  <div key={a.id}
+                    onClick={() => {
+                      setFormData(p => ({
+                        ...p,
+                        actorIds: [...p.actorIds, a.id]
+                      }));
+                      setActorSearch('');
+                      setShowActorTips(false);
+                    }}
+                    className="p-3 hover:bg-blue-600 text-sm cursor-pointer flex justify-between border-b border-gray-700/50">{a.full_name} <Plus size={14} className="opacity-50" />
+                  </div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Stats & Release Info (මෙන්න ඔයා ඉල්ලපු කොටස) */}
+        <div className="grid grid-cols-2 gap-4 md:col-span-2">
+          <div><label className="text-xs font-semibold text-gray-400 uppercase mb-1 block">Year</label><input type="number" value={formData.year} onChange={(e) => setFormData(p => ({ ...p, year: e.target.value }))} className="w-full bg-gray-900 border border-gray-700 p-3 rounded-xl outline-none" /></div>
+          <div><label className="text-xs font-semibold text-gray-400 uppercase mb-1 block">Runtime (min)</label><input type="number" value={formData.runtime} onChange={(e) => setFormData(p => ({ ...p, runtime: e.target.value }))} className="w-full bg-gray-900 border border-gray-700 p-3 rounded-xl outline-none" /></div>
+
+          {/* Release Date */}
+          <div className="flex flex-col">
+            <label className="text-xs font-semibold text-gray-400 uppercase mb-1 block">Release Date</label>
+            <input type="date" value={formData.release_date} onChange={(e) => setFormData(p => ({ ...p, release_date: e.target.value }))} className="bg-gray-900 border border-gray-700 p-3 rounded-xl outline-none text-white text-sm" />
+          </div>
+
+          {/* Upcoming Toggle */}
+          <div className="flex items-center gap-3 px-4 bg-gray-950/50 border border-gray-800 rounded-xl mt-5">
+            <select
+              value={formData.release_status}
+              onChange={(e) =>
+                setFormData(p => ({ ...p, release_status: e.target.value }))
+              }
+              className="bg-gray-900 border border-gray-700 p-3 rounded-xl"
+            >
+              <option value="UPCOMING">Upcoming</option>
+              <option value="RELEASED">Released</option>
+            </select>
           </div>
         </div>
 
-        {/* Video URL */}
+        {/* Genres */}
         <div className="md:col-span-2">
-          <label className="text-xs font-semibold text-gray-400 uppercase flex items-center gap-2">
-             Trailer URL <span className="text-red-500 font-normal hidden sm:inline">(YouTube / MP4)</span>
-          </label>
-          <input 
-            type="url" 
-            value={formData.trailer_url} 
-            onChange={(e) => setFormData({...formData, trailer_url: e.target.value})} 
-            className="w-full bg-gray-900 border border-gray-700 p-3 rounded-xl focus:ring-2 focus:ring-red-600 outline-none" 
-            placeholder="https://..."
-          />
-        </div>
-        
-        {/* Year & Network */}
-        <div className="grid grid-cols-2 gap-4 md:contents">
-            <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-gray-400 uppercase">Year</label>
-                <input type="number" value={formData.year} onChange={(e) => setFormData({...formData, year: parseInt(e.target.value)})} className="bg-gray-900 border border-gray-700 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" />
-            </div>
-            <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-gray-400 uppercase">Network</label>
-                <input type="text" value={formData.network} onChange={(e) => setFormData({...formData, network: e.target.value})} className="bg-gray-900 border border-gray-700 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="HBO" />
-            </div>
+          <label className="text-xs font-semibold text-gray-400 uppercase mb-2 block">Genres</label>
+          <div className="flex flex-wrap gap-2">
+            {genres.map((g) => (
+              <button
+                key={g.id}
+                type="button"
+                onClick={() => toggleGenre(g.id)}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all ${formData.genreIds.includes(g.id)
+                  ? 'bg-blue-600 border-blue-500 text-white'
+                  : 'bg-gray-800 border-gray-700 text-gray-400'
+                  }`}
+              >
+                {g.name}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Seasons & Status */}
-        <div className="grid grid-cols-2 gap-4 md:contents">
-            <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-gray-400 uppercase">Seasons</label>
-                <input type="number" value={formData.seasons_count} onChange={(e) => setFormData({...formData, seasons_count: parseInt(e.target.value)})} className="bg-gray-900 border border-gray-700 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" />
-            </div>
-            <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-gray-400 uppercase">Status</label>
-                <select value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})} className="bg-gray-900 border border-gray-700 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
-                    <option value="Ongoing">Ongoing</option>
-                    <option value="Ended">Ended</option>
-                </select>
-            </div>
-        </div>
-
-        {/* Plot */}
+        {/* Synopsis */}
         <div className="md:col-span-2">
-          <label className="text-xs font-semibold text-gray-400 uppercase">Synopsis</label>
-          <textarea rows="3" value={formData.plot} onChange={(e) => setFormData({...formData, plot: e.target.value})} className="w-full bg-gray-900 border border-gray-700 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none" />
+          <label className="text-xs font-semibold text-gray-400 uppercase mb-1.5 block">Synopsis</label>
+          <textarea rows="3" value={formData.synopsis}
+            onChange={(e) =>
+              setFormData(p => ({ ...p, synopsis: e.target.value }))
+            }
+            className="w-full bg-gray-900 border border-gray-700 p-3 rounded-xl outline-none resize-none" placeholder="Enter movie description..." />
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-800 sticky bottom-0 bg-gray-900 sm:bg-transparent pb-2 sm:pb-0">
-        <Button type="submit" variant="primary" className="w-full sm:flex-1 py-3 order-1 sm:order-2">
-          {series ? 'Update Changes' : 'Publish Series'}
-        </Button>
-        <Button type="button" variant="secondary" onClick={onCancel} className="w-full sm:w-auto order-2 sm:order-1">
-          Discard
-        </Button>
+      <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-800 sticky bottom-0 bg-[#0f172a] pb-2">
+        <Button type="button" variant="primary" onClick={handleSeries} className="flex-1 py-3 order-1 sm:order-2">{series ? 'Save Changes' : 'Publish Series'}</Button>
+        <Button type="button" variant="secondary" onClick={onCancel} className="order-2 sm:order-1">Cancel</Button>
       </div>
-    </form>
+    </div>
   );
 };
 
@@ -141,22 +405,82 @@ export const AdminTVSeries = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingSeries, setEditingSeries] = useState(null);
 
-  const fetchSeries = async () => {
-    setLoading(true);
+  const [error, setError] = useState('');
+
+  const fetchSeries = useCallback(async () => {
     try {
-      if (api.tvSeries?.getAll) {
-        const res = await api.tvSeries.getAll();
-        setSeriesList(res.data || []);
-      }
-    } catch (error) { console.error(error); } finally { setLoading(false); }
-  };
+      setLoading(true);
+      setError("");
 
-  useEffect(() => { fetchSeries(); }, []);
+      const res = await getAllMovies();
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure?')) {
-      try { await api.tvSeries.delete(id); fetchSeries(); } catch (err) { alert("Failed"); }
+      const allMovies = res?.data?.movies || [];
+
+      // Filter out TV_SERIES
+      const tvSeries = allMovies.filter(
+        movie => movie.movie_type === "TV_SERIES"
+      );
+
+      setSeriesList(tvSeries);
+    } catch (err) {
+      console.error("Error fetching TV series:", err);
+      setError(
+        err?.response?.data?.message || "Failed to load tv series. Please try again."
+      );
+    } finally {
+      setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    fetchSeries();
+  }, [fetchSeries]);
+
+  const handleDelete = (seriesId) => {
+    toast((t) => (
+      <div className="flex flex-col gap-3">
+        <p className="text-sm font-medium">
+          Are you sure you want to delete this TV Series?
+        </p>
+
+        <div className="flex gap-2 justify-end">
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className="px-3 py-1 text-xs bg-gray-200 rounded-md"
+          >
+            Cancel
+          </button>
+
+          <button
+            onClick={async () => {
+              toast.dismiss(t.id);
+
+              const loadingToast = toast.loading("Deleting series...");
+
+              try {
+                const res = await deleteMovie(seriesId);
+
+                toast.dismiss(loadingToast);
+                toast.success("Series deleted successfully");
+
+                fetchSeries();
+
+              } catch (error) {
+                toast.dismiss(loadingToast);
+                console.log(error);
+                toast.error(
+                  error?.response?.data?.message ||
+                  "Failed to delete series"
+                );
+              }
+            }}
+            className="px-3 py-1 text-xs bg-red-600 text-white rounded-md"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    ));
   };
 
   const filteredSeries = seriesList.filter(s => s.title?.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -169,7 +493,7 @@ export const AdminTVSeries = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6">
-      
+
       {/* Responsive Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -221,7 +545,7 @@ export const AdminTVSeries = () => {
             <thead>
               <tr className="bg-gray-950/50 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
                 <th className="px-6 py-4">Show Info</th>
-                <th className="px-6 py-4">Network</th>
+                <th className="px-6 py-4">Director</th>
                 <th className="px-6 py-4">Seasons</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4 text-right">Actions</th>
@@ -233,7 +557,7 @@ export const AdminTVSeries = () => {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-12 rounded bg-gray-800 overflow-hidden border border-gray-700">
-                        {series.poster ? <img src={series.poster} className="w-full h-full object-cover" /> : <Tv className="w-full h-full p-2 text-gray-600" />}
+                        {series.poster_url_portrait ? <img src={series.poster_url_portrait} className="w-full h-full object-cover" /> : <Tv className="w-full h-full p-2 text-gray-600" />}
                       </div>
                       <div>
                         <p className="font-bold text-white">{series.title}</p>
@@ -241,8 +565,8 @@ export const AdminTVSeries = () => {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-gray-400">{series.network || '-'}</td>
-                  <td className="px-6 py-4 text-gray-400">{series.seasons_count}</td>
+                  <td className="px-6 py-4 text-gray-400">{series.director.full_name || '-'}</td>
+                  <td className="px-6 py-4 text-gray-400">{series.seasons_count || '0'}</td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${series.status === 'Ongoing' ? 'border-green-500/20 text-green-500 bg-green-500/5' : 'border-gray-500/20 text-gray-400 bg-gray-500/5'}`}>{series.status}</span>
                   </td>
@@ -271,7 +595,7 @@ export const AdminTVSeries = () => {
                   <span className={`text-[8px] px-2 py-0.5 rounded-full font-bold uppercase border ${series.status === 'Ongoing' ? 'border-green-500/20 text-green-500' : 'text-gray-400 border-gray-800'}`}>{series.status}</span>
                 </div>
                 <div className="flex gap-3 mt-1 text-xs text-gray-500">
-                  <span className="flex items-center gap-1"><Monitor size={12}/> {series.network || 'N/A'}</span>
+                  <span className="flex items-center gap-1"><Monitor size={12} /> {series.network || 'N/A'}</span>
                   <span>{series.year}</span>
                 </div>
                 <div className="flex gap-2 mt-4">
@@ -282,7 +606,7 @@ export const AdminTVSeries = () => {
             </div>
           ))}
         </div>
-        
+
         {filteredSeries.length === 0 && (
           <div className="py-20 text-center">
             <Info className="mx-auto text-gray-800 mb-2" size={40} />
@@ -294,12 +618,12 @@ export const AdminTVSeries = () => {
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editingSeries ? 'Edit Series' : 'Add New'} size="lg">
         <TVSeriesForm
           series={editingSeries}
-          onSubmit={async (data) => {
-            if (editingSeries) await api.tvSeries.update(editingSeries.id, data);
-            else await api.tvSeries.create(data);
-            setShowModal(false); fetchSeries();
-          }}
           onCancel={() => setShowModal(false)}
+          onSuccess={() => {
+            console.log("success");
+            fetchSeries();
+            setShowModal(false);
+          }}
         />
       </Modal>
     </div>

@@ -1,10 +1,9 @@
 import api from "../api/api";
 
-export const getAllMovies = async () => {
+export const getAllMovies = async (filter = '') => {
     try {
-        const response = await api.get("/movie");
+        const response = await api.get(`/movie${filter ? `?filter=${filter}` : ''}`);
         return response.data;
-
     } catch (error) {
         throw new Error(
             error?.response?.data?.message ||
