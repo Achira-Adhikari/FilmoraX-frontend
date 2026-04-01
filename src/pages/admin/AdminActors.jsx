@@ -143,7 +143,7 @@ const ActorForm = ({ actor, onCancel, onSuccess }) => {
       onSuccess();
     } catch (error) {
       toast.error(error.message || "Something went wrong");
-    }finally{
+    } finally {
       setLoading(false);
     }
   };
@@ -397,69 +397,85 @@ export const AdminActors = () => {
       {/* Main Content Area */}
       <div className="bg-gray-900/50 rounded-3xl border border-gray-800 overflow-hidden shadow-xl backdrop-blur-sm">
 
+        {!loading && error && (
+          <div className="text-center text-red-500 py-10">
+            <p className="mb-4">{error}</p>
+            <button
+              onClick={fetchActors}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
         {/* Desktop View */}
-        <div className="hidden md:block">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-gray-950/50 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">
-                <th className="px-8 py-5">Profile</th>
-                <th className="px-8 py-5">Nationality</th>
-                <th className="px-8 py-5">Projects</th>
-                <th className="px-8 py-5 text-right">Management</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-800">
-              {filteredActors.map((actor) => (
-                <tr key={actor.id} className="hover:bg-white/[0.02] group transition-colors">
-                  <td className="px-8 py-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-gray-800 overflow-hidden border-2 border-gray-700 shadow-lg">
-                        {actor.image_url ? <img src={actor.image_url} className="w-full h-full object-cover" /> : <User className="w-full h-full p-3 text-gray-600" />}
-                      </div>
-                      <div>
-                        <p className="font-bold text-white group-hover:text-blue-400 transition-colors">{actor.full_name}</p>
-                        <p className="text-[10px] text-gray-500 font-medium">DOB: {new Date(actor.birth_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) || 'N/A'}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-8 py-4 text-gray-400 font-medium">{actor.nationality || '---'}</td>
-                  <td className="px-8 py-4">
-                    <div className="flex items-center gap-2">
-                      <Film size={14} className="text-blue-500" />
-                      <span className="text-white font-bold text-xs">{actor.acted_movies?.length + actor.directed_movies?.length || 0}</span>
-                      <span className="text-gray-600 text-[10px] uppercase font-bold">Works</span>
-                    </div>
-                  </td>
-                  <td className="px-8 py-4 text-right">
-                    <div className="flex justify-end gap-3">
-                      <button onClick={() => { setEditingActor(actor); setShowModal(true); }} className="p-2 text-blue-400 hover:bg-blue-400/10 rounded-xl transition-all"><Edit2 size={18} /></button>
-                      <button onClick={() => handleDelete(actor.id)} className="p-2 text-red-400 hover:bg-red-400/10 rounded-xl transition-all"><Trash2 size={18} /></button>
-                    </div>
-                  </td>
+        {!error && (
+          <div className="hidden md:block">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-gray-950/50 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">
+                  <th className="px-8 py-5">Profile</th>
+                  <th className="px-8 py-5">Nationality</th>
+                  <th className="px-8 py-5">Projects</th>
+                  <th className="px-8 py-5 text-right">Management</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-gray-800">
+                {filteredActors.map((actor) => (
+                  <tr key={actor.id} className="hover:bg-white/[0.02] group transition-colors">
+                    <td className="px-8 py-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-gray-800 overflow-hidden border-2 border-gray-700 shadow-lg">
+                          {actor.image_url ? <img src={actor.image_url} className="w-full h-full object-cover" /> : <User className="w-full h-full p-3 text-gray-600" />}
+                        </div>
+                        <div>
+                          <p className="font-bold text-white group-hover:text-blue-400 transition-colors">{actor.full_name}</p>
+                          <p className="text-[10px] text-gray-500 font-medium">DOB: {new Date(actor.birth_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) || 'N/A'}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-8 py-4 text-gray-400 font-medium">{actor.nationality || '---'}</td>
+                    <td className="px-8 py-4">
+                      <div className="flex items-center gap-2">
+                        <Film size={14} className="text-blue-500" />
+                        <span className="text-white font-bold text-xs">{actor.acted_movies?.length + actor.directed_movies?.length || 0}</span>
+                        <span className="text-gray-600 text-[10px] uppercase font-bold">Works</span>
+                      </div>
+                    </td>
+                    <td className="px-8 py-4 text-right">
+                      <div className="flex justify-end gap-3">
+                        <button onClick={() => { setEditingActor(actor); setShowModal(true); }} className="p-2 text-blue-400 hover:bg-blue-400/10 rounded-xl transition-all"><Edit2 size={18} /></button>
+                        <button onClick={() => handleDelete(actor.id)} className="p-2 text-red-400 hover:bg-red-400/10 rounded-xl transition-all"><Trash2 size={18} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* Mobile Card View */}
-        <div className="md:hidden divide-y divide-gray-800">
-          {filteredActors.map((actor) => (
-            <div key={actor.id} className="p-5 space-y-4">
-              <div className="flex items-center gap-4">
-                <img src={actor.image_url || '/api/placeholder/40/40'} className="w-14 h-14 rounded-full object-cover border-2 border-gray-700" />
-                <div className="flex-1">
-                  <h3 className="font-bold text-white text-lg">{actor.full_name}</h3>
-                  <p className="text-xs text-blue-500 font-bold uppercase tracking-wider">{actor.nationality}</p>
+        {!error && (
+          <div className="md:hidden divide-y divide-gray-800">
+            {filteredActors.map((actor) => (
+              <div key={actor.id} className="p-5 space-y-4">
+                <div className="flex items-center gap-4">
+                  <img src={actor.image_url || '/api/placeholder/40/40'} className="w-14 h-14 rounded-full object-cover border-2 border-gray-700" />
+                  <div className="flex-1">
+                    <h3 className="font-bold text-white text-lg">{actor.full_name}</h3>
+                    <p className="text-xs text-blue-500 font-bold uppercase tracking-wider">{actor.nationality}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={() => { setEditingActor(actor); setShowModal(true); }} className="flex items-center justify-center gap-2 py-3 bg-blue-600/10 text-blue-500 rounded-xl text-xs font-bold transition-active:scale-95"><Edit2 size={14} /> Edit</button>
+                  <button onClick={() => handleDelete(actor.id)} className="flex items-center justify-center gap-2 py-3 bg-red-600/10 text-red-500 rounded-xl text-xs font-bold transition-active:scale-95"><Trash2 size={14} /> Delete</button>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => { setEditingActor(actor); setShowModal(true); }} className="flex items-center justify-center gap-2 py-3 bg-blue-600/10 text-blue-500 rounded-xl text-xs font-bold transition-active:scale-95"><Edit2 size={14} /> Edit</button>
-                <button onClick={() => handleDelete(actor.id)} className="flex items-center justify-center gap-2 py-3 bg-red-600/10 text-red-500 rounded-xl text-xs font-bold transition-active:scale-95"><Trash2 size={14} /> Delete</button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {filteredActors.length === 0 && (
           <div className="py-24 text-center">

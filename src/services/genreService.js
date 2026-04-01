@@ -1,8 +1,8 @@
 import api from "../api/api";
 
-export const getAllMovies = async () => {
+export const getAllGenre = async () => {
     try {
-        const response = await api.get("/movie");
+        const response = await api.get("/genre");
         return response.data;
 
     } catch (error) {
@@ -14,9 +14,9 @@ export const getAllMovies = async () => {
     }
 };
 
-export const getMovieById = async (id) => {
+export const getGenreById = async (id) => {
     try {
-        const response = await api.get(`/movie/${id}`);
+        const response = await api.get(`/genre/${id}`);
         return response.data;
 
     } catch (error) {
@@ -28,9 +28,9 @@ export const getMovieById = async (id) => {
     }
 };
 
-export const addMovie = async (data) => {
+export const addGenre = async (data) => {
     try {
-        const response = await api.post("/movie", data);
+        const response = await api.post("/genre", data);
         console.log(response.data);
         return response.data;
 
@@ -43,9 +43,9 @@ export const addMovie = async (data) => {
     }
 };
 
-export const updateMovie = async (data,id) => {
+export const updateGenre = async (data,id) => {
     try {
-        const response = await api.patch(`/movie/${id}`, data);
+        const response = await api.patch(`/genre/${id}`, data);
         console.log(response.data);
         return response.data;
 
@@ -58,9 +58,9 @@ export const updateMovie = async (data,id) => {
     }
 };
 
-export const deleteMovie = async (id) => {
+export const deleteGenre = async (id) => {
     try {
-        const response = await api.delete(`/movie/${id}`);
+        const response = await api.delete(`/genre/${id}`);
         console.log(response.data);
         return response.data;
 
