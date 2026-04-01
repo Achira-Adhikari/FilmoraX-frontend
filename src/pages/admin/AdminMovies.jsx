@@ -4,61 +4,223 @@ import { Plus, Edit2, Trash2, Search, Film, Loader2, Calendar, User, Star, Video
 import { api } from '../../services/api';
 import { Button } from '../../components/Button';
 import { Modal } from '../../components/Modal';
-import { deleteMovie, getAllMovies } from '../../services/movieService';
+import { addMovie, deleteMovie, getAllMovies, updateMovie } from '../../services/movieService';
 import toast from 'react-hot-toast';
+import { getAllGenre } from '../../services/genreService';
+import { getAllActors } from '../../services/actorService';
 
 // --- Movie Form Component ---
 const MovieForm = ({ movie, onCancel, onSuccess }) => {
   const [formData, setFormData] = useState({
-    title: movie?.title || '',
-    year: movie?.year || new Date().getFullYear(),
-    runtime: movie?.runtime || 120,
-    directorId: movie?.directorId || '',
-    actors: Array.isArray(movie?.actors) ? movie.actors : [],
-    plot: movie?.plot || '',
-    genreIds: Array.isArray(movie?.Genre) ? movie.Genre : [],
-    poster_url_portrait: movie?.poster_url_portrait || '',
-    poster_url_landscape: movie?.poster_url_landscape || '',
-    trailer_url: movie?.trailer_url || '',
-    backdrop: movie?.backdrop || '',
-    trailer: movie?.trailer || '',
-    releaseDate: movie?.releaseDate || '', // <--- නිවැරදිව එකතු කළා
-    isUpcoming: movie?.isUpcoming || false // <--- නිවැරදිව එකතු කළා
+    title: "",
+    year: "",
+    runtime: "",
+    synopsis: "",
+    poster_url_portrait: "",
+    poster_url_landscape: "",
+    trailer_url: "",
+    release_date: "",
+    movie_type: "FULL_MOVIE",
+    release_status: "UPCOMING",
+    directorId: "",
+    actorIds: [],
+    genreIds: []
   });
 
   const [actorSearch, setActorSearch] = useState('');
   const [directorSearch, setDirectorSearch] = useState(movie?.director || '');
   const [showActorTips, setShowActorTips] = useState(false);
   const [showDirectorTips, setShowDirectorTips] = useState(false);
+  const [genres, setGenres] = useState([]);
+  const [actors, setActors] = useState([]);
+  const [loading, setLoading] = useState([]);
 
-  const genresList = ['Action', 'Adventure', 'Comedy', 'Crime', 'Drama', 'Fantasy', 'Horror', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller'];
-  const directorsList = ['Christopher Nolan', 'Greta Gerwig', 'Denis Villeneuve', 'Martin Scorsese', 'James Cameron', 'Quentin Tarantino'];
-  const actorsList = ['Leonardo DiCaprio', 'Cillian Murphy', 'Margot Robbie', 'Timothée Chalamet', 'Robert Downey Jr.', 'Zendaya', 'Tom Hardy'];
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    if (movie) {
+      setFormData(prev => ({
+        ...prev,
+        title: movie.title || "",
+        year: movie.year || "",
+        runtime: movie.runtime || "",
+        synopsis: movie.synopsis || "",
+        poster_url_portrait: movie.poster_url_portrait || "",
+        poster_url_landscape: movie.poster_url_landscape || "",
+        trailer_url: movie.trailer_url || "",
+        release_date: movie.release_date || "",
+        movie_type: movie.movie_type || "",
+        release_status: movie.release_status || "",
+        directorId: movie.director?.id || "",
+        actorIds: movie.actors?.map(a => a.id) || [],
+        genreIds: movie.Genre?.map(g => g.id) || []
+      }));
+
+      // Set director search input value (text box ekata nama enne meken)
+      setDirectorSearch(movie.director?.full_name || "");
+    }
+  }, [movie]);
 
   const loadData = async () => {
     try {
-      const [genresREsponse, actorsResponse] = await Promise.allSettled([
-        
+      setLoading(true);
+
+      const [genresRes, actorsRes] = await Promise.all([
+        getAllGenre(),
+        getAllActors()
       ]);
 
-      if (genresREsponse.status === "fulfilled") {
-        setExamTypes(genresREsponse.value);
-      }
+      setGenres(genresRes.data);
+      setActors(actorsRes.data);
 
-      if (actorsResponse.status === "fulfilled") {
-        setCategory(actorsResponse.value);
-      }
     } catch (error) {
-      
+      console.error(error);
+      toast.error("Failed to load initial data");
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
-  const filteredDirectors = directorsList.filter(d =>
-    d.toLowerCase().includes(directorSearch.toLowerCase()) && d !== formData.director
+  const handleMovie = async () => {
+    try {
+
+      // VALIDATION 
+
+      if (!formData.title.trim())
+        return toast.error("Please enter movie title");
+
+      if (!formData.poster_url_portrait.trim())
+        return toast.error("Please enter portrait poster URL");
+
+      if (!formData.poster_url_landscape.trim())
+        return toast.error("Please enter landscape poster URL");
+
+      if (!formData.trailer_url.trim())
+        return toast.error("Please enter trailer URL");
+
+      if (!formData.year)
+        return toast.error("Please enter movie year");
+
+      if (!formData.runtime)
+        return toast.error("Please enter runtime");
+
+      if (!formData.release_date)
+        return toast.error("Please select release date");
+
+      if (!formData.directorId)
+        return toast.error("Please select director");
+
+      if (!formData.actorIds.length)
+        return toast.error("Please select at least one actor");
+
+      if (!formData.genreIds.length)
+        return toast.error("Please select at least one genre");
+
+      if (!formData.synopsis.trim())
+        return toast.error("Please enter synopsis");
+
+      // PREPARE PAYLOAD 
+
+      setLoading(true);
+
+      const basePayload = {
+        title: formData.title.trim(),
+        poster_url_portrait: formData.poster_url_portrait.trim(),
+        poster_url_landscape: formData.poster_url_landscape.trim(),
+        trailer_url: formData.trailer_url.trim(),
+
+        year: Number(formData.year),
+        runtime: Number(formData.runtime),
+
+        release_date: formData.release_date,
+        release_status: formData.release_status,
+        movie_type: formData.movie_type,
+
+        synopsis: formData.synopsis.trim(),
+
+        directorId: Number(formData.directorId),
+        actorIds: formData.actorIds,
+        genreIds: formData.genreIds
+      };
+
+      // UPDATE
+
+      if (movie) {
+
+        const normalizedOldMovie = {
+          title: movie.title,
+          poster_url_portrait: movie.poster_url_portrait,
+          poster_url_landscape: movie.poster_url_landscape,
+          trailer_url: movie.trailer_url,
+
+          year: Number(movie.year),
+          runtime: Number(movie.runtime),
+
+          release_date: movie.release_date,
+          release_status: movie.release_status,
+          movie_type: movie.movie_type,
+
+          synopsis: movie.synopsis,
+
+          directorId: movie.director?.id || null,
+          actorIds: movie.actors?.map(a => a.id) || [],
+          genreIds: movie.Genre?.map(g => g.id) || []
+        };
+
+        const payload = {};
+
+        Object.keys(basePayload).forEach(key => {
+          const newValue = basePayload[key];
+          const oldValue = normalizedOldMovie[key];
+
+          if (Array.isArray(newValue)) {
+            const sortedNew = [...newValue].sort();
+            const sortedOld = [...(oldValue || [])].sort();
+
+            if (JSON.stringify(sortedNew) !== JSON.stringify(sortedOld)) {
+              payload[key] = newValue;
+            }
+          } else if (newValue !== oldValue) {
+            payload[key] = newValue;
+          }
+        });
+
+        if (Object.keys(payload).length === 0) {
+          toast.error("No changes detected");
+          return;
+        }
+
+        await updateMovie(payload, movie.id);
+        toast.success("Movie updated successfully!");
+
+      } else {
+
+        // CREATE 
+
+        await addMovie(basePayload);
+        toast.success("Movie created successfully!");
+      }
+
+      onSuccess();
+
+    } catch (error) {
+      console.error(error);
+      toast.error(error?.response?.data?.message || error.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredDirectors = actors.filter(d =>
+    d.full_name.toLowerCase().includes(directorSearch.toLowerCase()) &&
+    d.id !== formData.directorId
   );
 
-  const filteredActors = actorsList.filter(a =>
-    a.toLowerCase().includes(actorSearch.toLowerCase()) && !formData.actors.includes(a)
+  const filteredActors = actors.filter(a =>
+    a.full_name.toLowerCase().includes(actorSearch.toLowerCase()) &&
+    !formData.actorIds.includes(a.id)
   );
 
   const handleImageChange = (e, field) => {
@@ -70,17 +232,24 @@ const MovieForm = ({ movie, onCancel, onSuccess }) => {
     }
   };
 
-  const toggleGenre = (genre) => {
-    const newGenres = formData.genres.includes(genre)
-      ? formData.genres.filter((g) => g !== genre)
-      : [...formData.genres, genre];
-    setFormData(prev => ({ ...prev, genres: newGenres }));
+  const toggleGenre = (genreId) => {
+    setFormData(prev => ({
+      ...prev,
+      genreIds: prev.genreIds.includes(genreId)
+        ? prev.genreIds.filter(id => id !== genreId)
+        : [...prev.genreIds, genreId]
+    }));
   };
 
   return (
     <div className="space-y-5 text-white max-h-[80vh] overflow-y-auto px-1 custom-scrollbar">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Title */}
+        <div className="md:col-span-2">
+          <label className="text-xs font-semibold text-gray-400 uppercase mb-1.5 block">Movie Title *</label>
+          <input type="text" value={formData.title} onChange={(e) => setFormData(p => ({ ...p, title: e.target.value }))} className="w-full bg-gray-900 border border-gray-700 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" required />
+        </div>
+
         <div className="md:col-span-2">
           <label className="text-xs font-semibold text-gray-400 uppercase mb-1.5 block">Movie Portrait URL *</label>
           <input type="text" value={formData.poster_url_portrait} onChange={(e) => setFormData(p => ({ ...p, poster_url_portrait: e.target.value }))} className="w-full bg-gray-900 border border-gray-700 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" required />
@@ -96,15 +265,6 @@ const MovieForm = ({ movie, onCancel, onSuccess }) => {
           <input type="text" value={formData.trailer_url} onChange={(e) => setFormData(p => ({ ...p, trailer_url: e.target.value }))} className="w-full bg-gray-900 border border-gray-700 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" required />
         </div>
 
-        {/* Poster */}
-        <div className="md:col-span-2">
-          <label className="text-xs font-semibold text-gray-400 uppercase mb-1.5 block">Poster Image</label>
-          <div className="mt-2 flex items-center gap-4 p-4 border-2 border-dashed border-gray-800 rounded-xl bg-gray-950/50">
-            {formData.poster ? <img src={formData.poster} className="w-20 h-28 object-cover rounded-lg border border-gray-700 shadow-xl" /> : <div className="w-20 h-28 rounded-lg bg-gray-800 flex items-center justify-center"><Film className="text-gray-600" /></div>}
-            <input type="file" accept="image/*" onChange={(e) => handleImageChange(e, 'poster')} className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-blue-600/10 file:text-blue-500 cursor-pointer" />
-          </div>
-        </div>
-
         {/* Director Search */}
         <div className="md:col-span-2 relative">
           <label className="text-xs font-semibold text-gray-400 uppercase mb-1.5 block">Director</label>
@@ -116,7 +276,13 @@ const MovieForm = ({ movie, onCancel, onSuccess }) => {
             {showDirectorTips && directorSearch && filteredDirectors.length > 0 && (
               <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute z-50 w-full mt-1 bg-gray-800 border border-gray-700 rounded-xl shadow-2xl overflow-hidden">
                 {filteredDirectors.map(d => (
-                  <div key={d} onClick={() => { setFormData(p => ({ ...p, director: d })); setDirectorSearch(d); setShowDirectorTips(false); }} className="p-3 hover:bg-blue-600 text-sm cursor-pointer flex justify-between">{d} <Check size={14} className="opacity-50" /></div>
+                  <div key={d.id}
+                    onClick={() => {
+                      setFormData(p => ({ ...p, directorId: d.id }));
+                      setDirectorSearch(d.full_name);
+                      setShowDirectorTips(false);
+                    }}
+                    className="p-3 hover:bg-blue-600 text-sm cursor-pointer flex justify-between">{d.full_name} <Check size={14} className="opacity-50" /></div>
                 ))}
               </motion.div>
             )}
@@ -127,18 +293,39 @@ const MovieForm = ({ movie, onCancel, onSuccess }) => {
         <div className="md:col-span-2 relative">
           <label className="text-xs font-semibold text-gray-400 uppercase mb-1.5 block">Cast / Actors</label>
           <div className="flex flex-wrap gap-2 p-2 bg-gray-900 border border-gray-700 rounded-xl min-h-[52px] focus-within:ring-2 focus-within:ring-blue-500">
-            {formData.actors.map(actor => (
-              <span key={actor} className="flex items-center gap-1 bg-blue-600 text-white text-[11px] font-bold px-2 py-1 rounded-lg">
-                {actor} <X size={14} className="cursor-pointer hover:text-red-200" onClick={() => setFormData(p => ({ ...p, actors: p.actors.filter(a => a !== actor) }))} />
-              </span>
-            ))}
+            {formData.actorIds.map(id => {
+              const actor = actors.find(a => a.id === id);
+              return (
+                <span key={id} className="...">
+                  {actor?.full_name}
+                  <X
+                    onClick={() =>
+                      setFormData(p => ({
+                        ...p,
+                        actorIds: p.actorIds.filter(aid => aid !== id)
+                      }))
+                    }
+                  />
+                </span>
+              );
+            })}
             <input type="text" value={actorSearch} onChange={(e) => { setActorSearch(e.target.value); setShowActorTips(true); }} onFocus={() => setShowActorTips(true)} placeholder="Search and add..." className="flex-1 min-w-[120px] bg-transparent border-none outline-none text-sm p-1 text-white" />
           </div>
           <AnimatePresence>
             {showActorTips && actorSearch && filteredActors.length > 0 && (
               <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute z-50 w-full mt-1 bg-gray-800 border border-gray-700 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
                 {filteredActors.map(a => (
-                  <div key={a} onClick={() => { setFormData(p => ({ ...p, actors: [...p.actors, a] })); setActorSearch(''); setShowActorTips(false); }} className="p-3 hover:bg-blue-600 text-sm cursor-pointer flex justify-between border-b border-gray-700/50">{a} <Plus size={14} className="opacity-50" /></div>
+                  <div key={a.id}
+                    onClick={() => {
+                      setFormData(p => ({
+                        ...p,
+                        actorIds: [...p.actorIds, a.id]
+                      }));
+                      setActorSearch('');
+                      setShowActorTips(false);
+                    }}
+                    className="p-3 hover:bg-blue-600 text-sm cursor-pointer flex justify-between border-b border-gray-700/50">{a.full_name} <Plus size={14} className="opacity-50" />
+                  </div>
                 ))}
               </motion.div>
             )}
@@ -153,19 +340,32 @@ const MovieForm = ({ movie, onCancel, onSuccess }) => {
           {/* Release Date */}
           <div className="flex flex-col">
             <label className="text-xs font-semibold text-gray-400 uppercase mb-1 block">Release Date</label>
-            <input type="date" value={formData.releaseDate} onChange={(e) => setFormData(p => ({ ...p, releaseDate: e.target.value }))} className="bg-gray-900 border border-gray-700 p-3 rounded-xl outline-none text-white text-sm" />
+            <input type="date" value={formData.release_date} onChange={(e) => setFormData(p => ({ ...p, release_date: e.target.value }))} className="bg-gray-900 border border-gray-700 p-3 rounded-xl outline-none text-white text-sm" />
           </div>
 
           {/* Upcoming Toggle */}
           <div className="flex items-center gap-3 px-4 bg-gray-950/50 border border-gray-800 rounded-xl mt-5">
-            <input
-              type="checkbox"
-              id="upcoming"
-              checked={formData.isUpcoming}
-              onChange={(e) => setFormData(p => ({ ...p, isUpcoming: e.target.checked }))}
-              className="w-5 h-5 rounded text-blue-600 bg-gray-900 border-gray-700"
-            />
-            <label htmlFor="upcoming" className="text-xs font-semibold text-gray-400 uppercase cursor-pointer select-none">Upcoming Movie</label>
+            <select
+              value={formData.release_status}
+              onChange={(e) =>
+                setFormData(p => ({ ...p, release_status: e.target.value }))
+              }
+              className="bg-gray-900 border border-gray-700 p-3 rounded-xl"
+            >
+              <option value="UPCOMING">Upcoming</option>
+              <option value="RELEASED">Released</option>
+            </select>
+            <select
+              value={formData.movie_type}
+              onChange={(e) =>
+                setFormData(p => ({ ...p, movie_type: e.target.value }))
+              }
+              className="bg-gray-900 border border-gray-700 p-3 rounded-xl"
+            >
+              <option value="FULL_MOVIE">Full Movie</option>
+              <option value="SHORT_MOVIE">Short Movie</option>
+              <option value="TV_SERIES">Tv Series</option>
+            </select>
           </div>
         </div>
 
@@ -173,8 +373,18 @@ const MovieForm = ({ movie, onCancel, onSuccess }) => {
         <div className="md:col-span-2">
           <label className="text-xs font-semibold text-gray-400 uppercase mb-2 block">Genres</label>
           <div className="flex flex-wrap gap-2">
-            {genresList.map((g) => (
-              <button key={g} type="button" onClick={() => toggleGenre(g)} className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all ${formData.genres.includes(g) ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-600/20' : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500'}`}>{g}</button>
+            {genres.map((g) => (
+              <button
+                key={g.id}
+                type="button"
+                onClick={() => toggleGenre(g.id)}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all ${formData.genreIds.includes(g.id)
+                  ? 'bg-blue-600 border-blue-500 text-white'
+                  : 'bg-gray-800 border-gray-700 text-gray-400'
+                  }`}
+              >
+                {g.name}
+              </button>
             ))}
           </div>
         </div>
@@ -182,12 +392,16 @@ const MovieForm = ({ movie, onCancel, onSuccess }) => {
         {/* Synopsis */}
         <div className="md:col-span-2">
           <label className="text-xs font-semibold text-gray-400 uppercase mb-1.5 block">Synopsis</label>
-          <textarea rows="3" value={formData.plot} onChange={(e) => setFormData(p => ({ ...p, plot: e.target.value }))} className="w-full bg-gray-900 border border-gray-700 p-3 rounded-xl outline-none resize-none" placeholder="Enter movie description..." />
+          <textarea rows="3" value={formData.synopsis}
+            onChange={(e) =>
+              setFormData(p => ({ ...p, synopsis: e.target.value }))
+            }
+            className="w-full bg-gray-900 border border-gray-700 p-3 rounded-xl outline-none resize-none" placeholder="Enter movie description..." />
         </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-800 sticky bottom-0 bg-[#0f172a] pb-2">
-        <Button type="submit" variant="primary" className="flex-1 py-3 order-1 sm:order-2">{movie ? 'Save Changes' : 'Publish Movie'}</Button>
+        <Button type="submit" variant="primary" onClick={handleMovie} className="flex-1 py-3 order-1 sm:order-2">{movie ? 'Save Changes' : 'Publish Movie'}</Button>
         <Button type="button" variant="secondary" onClick={onCancel} className="order-2 sm:order-1">Cancel</Button>
       </div>
     </div>
@@ -274,15 +488,8 @@ export const AdminMovies = () => {
   };
 
   const handleEdit = (movie) => {
-    setEditingMovie(null);
-    setTimeout(() => {
-      setEditingMovie({
-        ...movie,
-        actors: Array.isArray(movie.actors) ? movie.actors : [],
-        genres: Array.isArray(movie.genres) ? movie.genres : []
-      });
-      setShowModal(true);
-    }, 10);
+    setEditingMovie(movie);
+    setShowModal(true);
   };
 
   const filteredMovies = movies.filter(m =>
