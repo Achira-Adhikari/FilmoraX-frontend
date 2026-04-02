@@ -104,7 +104,7 @@ const TVSeriesForm = ({ series, onCancel, onSuccess }) => {
         return toast.error("Please enter movie year");
 
       if (!formData.runtime)
-        return toast.error("Please enter runtime");
+        return toast.error("Please enter episode count");
 
       if (!formData.release_date)
         return toast.error("Please select release date");
@@ -546,7 +546,7 @@ export const AdminTVSeries = () => {
               <tr className="bg-gray-950/50 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
                 <th className="px-6 py-4">Show Info</th>
                 <th className="px-6 py-4">Director</th>
-                <th className="px-6 py-4">Seasons</th>
+                <th className="px-6 py-4">Episodes</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
@@ -566,7 +566,7 @@ export const AdminTVSeries = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-gray-400">{series.director.full_name || '-'}</td>
-                  <td className="px-6 py-4 text-gray-400">{series.seasons_count || '0'}</td>
+                  <td className="px-6 py-4 text-gray-400">{series.runtime || '0'}</td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${series.status === 'Ongoing' ? 'border-green-500/20 text-green-500 bg-green-500/5' : 'border-gray-500/20 text-gray-400 bg-gray-500/5'}`}>{series.status}</span>
                   </td>
