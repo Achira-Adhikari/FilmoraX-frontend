@@ -306,10 +306,10 @@ export const MovieDetail = () => {
                   className={`w-4 h-4 ${isInFavorites(movie.id) ? "fill-current" : ""}`}
                 />{" "}
                 Favorite
-              </button> */}
+              </button>
               <button className="flex items-center justify-center gap-2 w-full p-3 rounded-sm border border-white/5 bg-white/5 text-gray-400 font-bold text-[10px] uppercase">
                 <Share2 className="w-4 h-4" /> Share
-              </button>
+              </button> */}
             </div>
           </div>
         </div>

@@ -8,6 +8,7 @@ export const setToken = (token) => {
 
 export const clearAuth = () => {
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem("auth-storage");
 };
 
 export const isTokenExpired = () => {
