@@ -12,7 +12,7 @@ import {
   Timer,
 } from "lucide-react";
 import { useStore } from "../store/useStore";
- 
+
 // Components Imports
 import { ActorCard } from "../components/MovieCard";
 import { DetailSkeleton } from "../components/LoadingSkeleton";
@@ -20,7 +20,9 @@ import { TrailerModal } from "../components/Modal";
 import { ReviewCard, ReviewForm } from "../components/ReviewCard";
 import { Button } from "../components/Button";
 import * as movieService from "../services/movieService";
- 
+import { StarRating } from "../components/Rating";
+import { addReview } from "../services/reviewService";
+
 // --- Countdown Component ---
 const CountdownTimer = ({ targetDate }) => {
   const calculateTimeLeft = () => {
@@ -36,14 +38,14 @@ const CountdownTimer = ({ targetDate }) => {
     }
     return timeLeft;
   };
- 
+
   const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
- 
+
   useEffect(() => {
     const timer = setInterval(() => setTimeLeft(calculateTimeLeft()), 1000);
     return () => clearInterval(timer);
   }, [targetDate]);
- 
+
   const timerComponents = Object.keys(timeLeft).map((interval) => (
     <div key={interval} className="flex flex-col items-center">
       <div className="bg-blue-600/10 border border-blue-500/20 backdrop-blur-md w-12 h-12 flex items-center justify-center rounded-lg">
@@ -56,10 +58,10 @@ const CountdownTimer = ({ targetDate }) => {
       </span>
     </div>
   ));
- 
+
   return <div className="flex items-center gap-3 py-2">{timerComponents}</div>;
 };
- 
+
 export const MovieDetail = () => {
   const { id } = useParams();
   const [movie, setMovie] = useState(null);
@@ -67,7 +69,8 @@ export const MovieDetail = () => {
   const [loading, setLoading] = useState(true);
   const [trailerOpen, setTrailerOpen] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
- 
+
+
   const {
     isAuthenticated,
     isInWatchlist,
@@ -76,16 +79,17 @@ export const MovieDetail = () => {
     removeFromWatchlist,
     addToFavorites,
     removeFromFavorites,
-    getUserRating,
   } = useStore();
- 
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
         const movieRes = await movieService.getMovieById(id);
- 
+
+        console.log("movie data", movieRes.data);
         setMovie(movieRes.data);
+        setReviews(movieRes.data.Review);
       } catch (error) {
         console.error("Error fetching movie:", error);
       } finally {
@@ -95,7 +99,7 @@ export const MovieDetail = () => {
     fetchData();
     window.scrollTo(0, 0);
   }, [id]);
- 
+
   if (loading) return <DetailSkeleton />;
   if (!movie)
     return (
@@ -103,10 +107,21 @@ export const MovieDetail = () => {
         Movie not found
       </div>
     );
- 
+
   // Release status එක පරීක්ෂා කිරීම
   const isUpcoming = movie.release_status === "UPCOMING";
- 
+
+  const handleSubmitReview = async (payload) => {
+    try {
+      const res = await addReview(payload);
+
+      setReviews((prev) => [res.data, ...prev]);
+      setShowReviewForm(false);
+    } catch (error) {
+      console.error("Error creating review:", error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black text-white pb-20">
       {/* Header Section */}
@@ -125,27 +140,29 @@ export const MovieDetail = () => {
                 <span>{movie.runtime} min</span>
               </div>
             </div>
- 
+
             <div className="flex items-center gap-8">
               <div className="text-right">
                 <p className="text-gray-500 text-[10px] font-black tracking-widest uppercase mb-1">
                   CineVault Rating
                 </p>
-                <div className="flex items-center gap-2">
-                  <Star className="w-8 h-8 text-yellow-500 fill-yellow-500" />
-                  <div>
-                    <span className="text-2xl font-bold">
-                      {movie.averageRating?.toFixed(1) || "0.0"}
-                    </span>
-                    <span className="text-gray-500">/10</span>
-                  </div>
+                <div className="flex flex-col items-end gap-2">
+                  <StarRating
+                    rating={movie.averageRating || 0}
+                    size="lg"
+                    readonly={true}
+                    color="yellow"
+                  />
+                  <span className="text-gray-500 text-sm">
+                    {movie.averageRating?.toFixed(1) || "0.0"} / 10
+                  </span>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
- 
+
       <div className="container mx-auto px-4 md:px-8 py-8">
         {/* Visuals Grid */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -177,7 +194,7 @@ export const MovieDetail = () => {
             </div>
           </div>
         </div>
- 
+
         {/* Info Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 mt-10">
           <div className="lg:col-span-2">
@@ -192,11 +209,11 @@ export const MovieDetail = () => {
                 </span>
               ))}
             </div>
- 
+
             <p className="text-lg md:text-xl text-gray-300 leading-relaxed mb-10">
               {movie.synopsis}
             </p>
- 
+
             {/* Production Info */}
             <div className="border-y border-white/5 py-4 space-y-4">
               <div className="flex gap-4">
@@ -218,7 +235,7 @@ export const MovieDetail = () => {
                 </span>
               </div>
             </div>
- 
+
             {/* Countdown for Upcoming */}
             {isUpcoming && (
               <div className="mt-10 p-6 bg-blue-600/5 border border-blue-500/10 rounded-sm">
@@ -231,7 +248,7 @@ export const MovieDetail = () => {
                 <CountdownTimer targetDate={movie.release_date} />
               </div>
             )}
- 
+
             {/* Cast Section */}
             <section className="mt-16">
               <div className="flex items-center gap-3 mb-8 group cursor-pointer">
@@ -249,8 +266,59 @@ export const MovieDetail = () => {
                 ))}
               </div>
             </section>
+
+            {/* Reviews Section */}
+            <section className="mt-20">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-3">
+                  <div className="w-1.5 h-8 bg-blue-600 rounded-full" />
+                  <h2 className="text-3xl font-black uppercase tracking-tighter">
+                    Reviews
+                  </h2>
+                </div>
+
+                {isAuthenticated && !showReviewForm && (
+                  <button
+                    onClick={() => setShowReviewForm(true)}
+                    className="bg-blue-500 hover:bg-blue-600 text-black font-black uppercase text-xs px-6 py-3 rounded-sm transition"
+                  >
+                    Write Review
+                  </button>
+                )}
+              </div>
+
+              {/* Review Form */}
+              <AnimatePresence>
+                {showReviewForm && (
+                  <ReviewForm
+                    movieId={movie.id}
+                    onSubmit={handleSubmitReview}
+                    onCancel={() => setShowReviewForm(false)}
+                  />
+                )}
+              </AnimatePresence>
+
+              {/* Reviews List */}
+              <div className="space-y-6 mt-10">
+                {reviews.length > 0 ? (
+                  reviews.map((review) => (
+                    <ReviewCard
+                      key={review.id}
+                      review={review}
+                      onMarkHelpful={(reviewId) =>
+                        console.log("Marked helpful:", reviewId)
+                      }
+                    />
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-sm">
+                    No reviews yet. Be the first to review!
+                  </p>
+                )}
+              </div>
+            </section>
           </div>
- 
+
           {/* Sidebar */}
           <div className="space-y-6">
             {/* <Button
@@ -272,7 +340,7 @@ export const MovieDetail = () => {
               )}
               {isInWatchlist(movie.id) ? "In Watchlist" : "Add to Watchlist"}
             </Button> */}
- 
+
             {/* Stats */}
             <div className="bg-[#121212] p-6 border border-white/5 space-y-6">
               <div>
@@ -292,7 +360,7 @@ export const MovieDetail = () => {
                 </div>
               </div>
             </div>
- 
+
             <div className="grid grid-cols-2 gap-3">
               {/* <button
                 onClick={() =>
@@ -314,7 +382,7 @@ export const MovieDetail = () => {
           </div>
         </div>
       </div>
- 
+
       <TrailerModal
         isOpen={trailerOpen}
         onClose={() => setTrailerOpen(false)}

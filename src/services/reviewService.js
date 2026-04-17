@@ -28,3 +28,18 @@ export const deleteReview = async (id) => {
         );
     }
 };
+
+export const addReview = async (data) => {
+    try {
+        const response = await api.post("/review", data);
+        console.log(response.data);
+        return response.data;
+
+    } catch (error) {
+        throw new Error(
+            error?.response?.data?.message ||
+            error.message ||
+            "Unexpected Error"
+        );
+    }
+};

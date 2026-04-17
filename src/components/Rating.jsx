@@ -3,45 +3,35 @@ import { Star, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 // --- StarRating: තරු 10 ක් පෙන්වන ප්‍රධාන Component එක ---
-export const StarRating = ({ rating, maxRating = 10, size = 'md', readonly = true, onChange, color = "yellow" }) => {
-  const [hoverRating, setHoverRating] = useState(0);
 
-  const sizes = {
-    sm: 'w-4 h-4',
-    md: 'w-5 h-5',
-    lg: 'w-6 h-6',
-    xl: 'w-8 h-8'
+export const StarRating = ({ rating = 0, size = "md", readonly = true }) => {
+  const starSize = {
+    sm: "w-4 h-4",
+    md: "w-5 h-5",
+    lg: "w-6 h-6",
+    xl: "w-8 h-8",
   };
 
-  const starCount = 10; // IMDb style තරු 10 ක්
-  const displayRating = hoverRating || rating;
-  
-  // පාට තීරණය කිරීම (Yellow for general, Blue for user)
-  const activeColor = color === "yellow" ? "fill-yellow-400 text-yellow-400" : "fill-blue-500 text-blue-500";
-
   return (
-    <div className="flex items-center gap-0.5">
-      {[...Array(starCount)].map((_, index) => {
-        const starValue = index + 1;
-        const isActive = starValue <= displayRating;
+    <div className="flex gap-1">
+      {[...Array(10)].map((_, index) => {
+        const fillPercentage = Math.min(Math.max(rating - index, 0), 1) * 100;
 
         return (
-          <motion.button
-            key={index}
-            whileHover={readonly ? {} : { scale: 1.3, zIndex: 10 }}
-            whileTap={readonly ? {} : { scale: 0.9 }}
-            className={`relative p-0.5 ${readonly ? 'cursor-default' : 'cursor-pointer'}`}
-            onClick={() => !readonly && onChange && onChange(starValue)}
-            onMouseEnter={() => !readonly && setHoverRating(starValue)}
-            onMouseLeave={() => !readonly && setHoverRating(0)}
-            disabled={readonly}
-          >
-            <Star 
-              className={`${sizes[size]} transition-colors duration-200 ${
-                isActive ? activeColor : 'text-gray-600 fill-transparent'
-              }`} 
-            />
-          </motion.button>
+          <div key={index} className="relative">
+            {/* Gray base star */}
+            <Star className={`${starSize[size]} text-gray-700`} />
+
+            {/* Filled star (supports decimals like 4.8) */}
+            <div
+              className="absolute top-0 left-0 overflow-hidden"
+              style={{ width: `${fillPercentage}%` }}
+            >
+              <Star
+                className={`${starSize[size]} text-yellow-400 fill-yellow-400`}
+              />
+            </div>
+          </div>
         );
       })}
     </div>

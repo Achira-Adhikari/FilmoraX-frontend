@@ -23,14 +23,14 @@ export const ReviewCard = ({ review, onMarkHelpful }) => {
     >
       <div className="flex flex-col sm:flex-row items-start gap-4">
         <img
-          src={review.userAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${review.userName}`}
-          alt={review.userName}
+          src={review.userAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${review.user.full_name}`}
+          alt={review.user.full_name}
           className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border border-white/10"
         />
         <div className="flex-1 w-full">
           <div className="flex items-start justify-between mb-2">
             <div>
-              <h4 className="text-white font-bold tracking-tight text-sm md:text-base">{review.userName}</h4>
+              <h4 className="text-white font-bold tracking-tight text-sm md:text-base">{review.user.full_name}</h4>
               <div className="flex items-center gap-2 mt-1">
                 <div className="flex items-center gap-1 bg-white/5 px-2 py-0.5 rounded">
                   <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
@@ -53,7 +53,7 @@ export const ReviewCard = ({ review, onMarkHelpful }) => {
           )}
 
           <p className="text-gray-400 text-xs md:text-sm leading-relaxed mb-4">
-            {review.content}
+            {review.comment}
           </p>
 
           <div className="flex items-center gap-4 border-t border-white/5 pt-4">
@@ -76,24 +76,38 @@ export const ReviewCard = ({ review, onMarkHelpful }) => {
   );
 };
 
-export const ReviewForm = ({ onSubmit, onCancel, initialRating = 0 }) => {
+export const ReviewForm = ({ movieId, onSubmit, onCancel, initialRating = 0 }) => {
   const [formData, setFormData] = useState({
     rating: initialRating || 0,
-    title: '',
-    content: '',
-    spoiler: false
+    comment: "",
   });
 
   const ratingLabels = {
-    10: "Masterpiece", 9: "Amazing", 8: "Great", 7: "Good", 6: "Fine",
-    5: "Average", 4: "Boring", 3: "Bad", 2: "Horrible", 1: "Appalling", 0: "Select Rating"
+    10: "Masterpiece",
+    9: "Amazing",
+    8: "Great",
+    7: "Good",
+    6: "Fine",
+    5: "Average",
+    4: "Boring",
+    3: "Bad",
+    2: "Horrible",
+    1: "Appalling",
+    0: "Select Rating",
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (formData.rating && formData.content) {
-      onSubmit(formData);
-    }
+
+    if (!formData.rating || !formData.comment.trim()) return;
+
+    const payload = {
+      movieId: Number(movieId),
+      rating: formData.rating,
+      comment: formData.comment,
+    };
+
+    onSubmit(payload);
   };
 
   return (
@@ -101,91 +115,80 @@ export const ReviewForm = ({ onSubmit, onCancel, initialRating = 0 }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       onSubmit={handleSubmit}
-      className="bg-[#1a1a1a] border border-white/10 rounded-sm p-5 md:p-8 space-y-6 md:space-y-8 shadow-2xl w-full"
+      className="bg-[#1a1a1a] border border-white/10 rounded-sm p-6 space-y-8 shadow-2xl w-full"
     >
+      {/* Header */}
       <div className="flex items-center justify-between border-b border-white/5 pb-4">
-        <h3 className="text-lg md:text-2xl font-black uppercase tracking-tighter text-white">Write a Review</h3>
-        <button type="button" onClick={onCancel} className="text-gray-500 hover:text-white transition-colors">
-          <X className="w-5 h-5 md:w-6 md:h-6" />
-        </button>
-      </div>
-
-      <div className="flex flex-col items-center justify-center py-6 bg-black/20 rounded-sm border border-white/5">
-        <p className="text-blue-500 text-[10px] font-black tracking-[0.3em] uppercase mb-2">Your Rating</p>
-        <h4 className="text-lg md:text-xl font-bold text-white mb-4 uppercase tracking-tight text-center">
-          {ratingLabels[formData.rating]}
-        </h4>
-        
-        <div className="scale-90 md:scale-100">
-          <StarRating
-            rating={formData.rating}
-            readonly={false}
-            size="xl"
-            color="yellow"
-            onChange={(val) => setFormData({ ...formData, rating: val })}
-          />
-        </div>
-        
-        <div className="mt-4 flex items-baseline gap-1">
-          <span className={`text-3xl md:text-4xl font-black ${formData.rating ? 'text-white' : 'text-gray-800'}`}>
-            {formData.rating || '?'}
-          </span>
-          <span className="text-gray-500 font-bold text-sm md:text-base">/10</span>
-        </div>
-      </div>
-
-      <div className="space-y-4 md:space-y-6">
-        <div>
-          <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Review Title</label>
-          <input
-            type="text"
-            value={formData.title}
-            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            className="w-full bg-[#121212] border border-white/10 text-white rounded-sm px-4 py-3 text-sm focus:outline-none focus:border-blue-400/50 transition-colors"
-            placeholder="Main point of your review"
-          />
-        </div>
-
-        <div>
-          <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Your Review *</label>
-          <textarea
-            value={formData.content}
-            onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-            className="w-full bg-[#121212] border border-white/10 text-white rounded-sm px-4 py-3 h-32 md:h-40 text-sm focus:outline-none focus:border-blue-400/50 transition-colors resize-none"
-            placeholder="Write your thoughts here..."
-            required
-          />
-        </div>
-
-        <div className="flex items-start gap-3 p-3 md:p-4 bg-yellow-400/5 rounded-sm border border-yellow-400/10">
-          <input
-            type="checkbox"
-            id="spoiler"
-            checked={formData.spoiler}
-            onChange={(e) => setFormData({ ...formData, spoiler: e.target.checked })}
-            className="w-4 h-4 md:w-5 md:h-5 mt-0.5 rounded border-gray-600 accent-blue-400 cursor-pointer"
-          />
-          <div className="flex items-center gap-2">
-            <Info className="w-3.5 h-3.5 md:w-4 md:h-4 text-blue-400 flex-shrink-0" />
-            <label htmlFor="spoiler" className="text-gray-300 text-[11px] md:text-sm font-bold cursor-pointer uppercase tracking-tighter leading-tight">
-              This review contains spoilers
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-3 pt-2">
-        <button
-          type="submit"
-          disabled={!formData.rating || !formData.content}
-          className="w-full bg-blue-400 hover:bg-blue-500 disabled:bg-[#333] disabled:text-gray-600 text-black font-black uppercase tracking-widest py-3 md:py-4 rounded-sm transition-all shadow-xl text-xs md:text-sm"
-        >
-          Submit Review
-        </button>
+        <h3 className="text-xl font-black uppercase text-white">
+          Write a Review
+        </h3>
         <button
           type="button"
           onClick={onCancel}
-          className="w-full bg-transparent border border-white/10 hover:bg-white/5 text-white font-black uppercase tracking-widest py-3 md:py-4 rounded-sm transition-all text-xs md:text-sm"
+          className="text-gray-500 hover:text-white"
+        >
+          <X className="w-6 h-6" />
+        </button>
+      </div>
+
+      {/* Rating Section */}
+      <div className="flex flex-col items-center py-6 bg-black/20 rounded-sm border border-white/5">
+        <p className="text-blue-500 text-[10px] font-black tracking-[0.3em] uppercase mb-2">
+          Your Rating
+        </p>
+
+        <h4 className="text-lg font-bold text-white mb-4 uppercase">
+          {ratingLabels[Math.round(formData.rating)]}
+        </h4>
+
+        <StarRating
+          rating={formData.rating}
+          readonly={false}
+          size="xl"
+          color="yellow"
+          onChange={(val) =>
+            setFormData((prev) => ({ ...prev, rating: val }))
+          }
+        />
+
+        <div className="mt-4 flex items-baseline gap-1">
+          <span className="text-4xl font-black text-white">
+            {formData.rating || "?"}
+          </span>
+          <span className="text-gray-500 font-bold">/10</span>
+        </div>
+      </div>
+
+      {/* Comment Section */}
+      <div>
+        <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
+          Your Review *
+        </label>
+        <textarea
+          value={formData.comment}
+          onChange={(e) =>
+            setFormData((prev) => ({ ...prev, comment: e.target.value }))
+          }
+          className="w-full bg-[#121212] border border-white/10 text-white rounded-sm px-4 py-3 h-32 text-sm focus:outline-none focus:border-blue-400/50 transition-colors resize-none"
+          placeholder="Write your thoughts here..."
+          required
+        />
+      </div>
+
+      {/* Buttons */}
+      <div className="flex flex-col gap-3">
+        <button
+          type="submit"
+          disabled={!formData.rating || !formData.comment.trim()}
+          className="w-full bg-blue-400 hover:bg-blue-500 disabled:bg-[#333] disabled:text-gray-600 text-black font-black uppercase py-3 rounded-sm transition-all"
+        >
+          Submit Review
+        </button>
+
+        <button
+          type="button"
+          onClick={onCancel}
+          className="w-full border border-white/10 hover:bg-white/5 text-white font-black uppercase py-3 rounded-sm transition-all"
         >
           Cancel
         </button>
