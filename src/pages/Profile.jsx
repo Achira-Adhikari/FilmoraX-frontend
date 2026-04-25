@@ -3,14 +3,22 @@ import { motion } from 'framer-motion';
 import { User, Mail, Calendar, Edit2, Heart, Bookmark, Star } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { Button } from '../components/Button';
+import toast, { Toaster } from 'react-hot-toast';
+import { deleteProfile, updateProfile } from '../services/profileService';
+import { useNavigate } from 'react-router-dom';
 
 export const Profile = () => {
-  const { user } = useStore();
+  const { user, updateUser, logout } = useStore();
+    const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    name: user?.name || '',
+    full_name: user?.full_name || '',
     email: user?.email || ''
   });
+
+  useEffect(() => {
+    console.log("user", user);
+  }, []);
 
   if (!user) {
     return (
@@ -25,6 +33,89 @@ export const Profile = () => {
     setIsEditing(false);
   };
 
+  const saveProfile = async () => {
+
+    const payload = {};
+
+    if (!formData.full_name)
+      return toast.error("Please enter your name");
+
+    if (!formData.email)
+      return toast.error("Please enter your email");
+
+    try {
+      if (user.full_name !== formData.full_name) {
+        payload.full_name = formData.full_name;
+      }
+
+      if (user.email !== formData.email) {
+        payload.email = formData.email;
+      }
+
+      if (Object.keys(payload).length === 0) {
+        toast.error("No changes detected");
+        return;
+      }
+
+      const response = await updateProfile(payload, user.id);
+      console.log(response);
+      updateUser(response.data);
+      toast.success(response.message || "Profile updated successfully");
+    } catch (error) {
+      console.error(error);
+      toast.error(error?.response?.data?.message || error.message || "Something went wrong");
+    } finally {
+      setIsEditing(false);
+    }
+  };
+
+  const deleteAccount = async()=>{
+toast((t) => (
+      <div className="flex flex-col gap-3">
+        <p className="text-sm font-medium">
+          Are you sure you want to delete your account?
+        </p>
+
+        <div className="flex gap-2 justify-end">
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className="px-3 py-1 text-xs bg-gray-200 rounded-md"
+          >
+            Cancel
+          </button>
+
+          <button
+            onClick={async () => {
+              toast.dismiss(t.id);
+
+              const loadingToast = toast.loading("Deleting account...");
+
+              try {
+                const res = await deleteProfile(user.id);
+
+                toast.dismiss(loadingToast);
+                toast.success(res.message || "Account deleted successfully");
+                logout();
+                navigate("/");
+
+              } catch (error) {
+                toast.dismiss(loadingToast);
+                console.log(error);
+                toast.error(
+                  error?.response?.data?.message ||
+                  "Failed to delete account"
+                );
+              }
+            }}
+            className="px-3 py-1 text-xs bg-red-600 text-white rounded-md"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    ));
+  };
+
   const stats = [
     { icon: Heart, label: 'Favorites', value: user.favorites?.length || 0, color: 'text-red-400' },
     { icon: Bookmark, label: 'Watchlist', value: user.watchlist?.length || 0, color: 'text-blue-400' },
@@ -33,6 +124,7 @@ export const Profile = () => {
 
   return (
     <div className="min-h-screen bg-gray-950 pt-20">
+      <Toaster position='top-center' />
       <div className="container mx-auto px-4 py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -45,11 +137,17 @@ export const Profile = () => {
             <div className="px-8 pb-8">
               <div className="flex flex-col md:flex-row gap-6 -mt-16 mb-8">
                 <div className="relative">
-                  <img
-                    src={user.avatar}
-                    alt={user.name}
-                    className="w-32 h-32 rounded-full border-4 border-gray-900 shadow-xl object-cover"
-                  />
+                  <div className="w-32 h-32 rounded-full border-4 border-gray-900 shadow-xl bg-blue-600 flex items-center justify-center">
+                    <span className="text-4xl font-black text-white tracking-widest">
+                      {user.full_name
+                        ?.split(" ")
+                        .map((name) => name[0])
+                        .slice(0, 2)
+                        .join("")
+                        .toUpperCase()}
+                    </span>
+                  </div>
+
                   <button className="absolute bottom-2 right-2 bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-full transition-colors">
                     <Edit2 className="w-4 h-4" />
                   </button>
@@ -58,7 +156,7 @@ export const Profile = () => {
                 <div className="flex-1 mt-4 md:mt-12">
                   <div className="flex items-start justify-between mb-4">
                     <div>
-                      <h1 className="text-3xl font-bold text-white mb-2">{user.name}</h1>
+                      <h1 className="text-3xl font-bold text-white mb-2">{user.full_name}</h1>
                       <p className="text-gray-400">{user.email}</p>
                     </div>
                     <Button
@@ -88,11 +186,10 @@ export const Profile = () => {
               </div>
 
               {isEditing && (
-                <motion.form
+                <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  onSubmit={handleSubmit}
                   className="bg-gray-800 rounded-lg p-6 space-y-4"
                 >
                   <h3 className="text-xl font-bold text-white mb-4">Edit Profile</h3>
@@ -103,8 +200,8 @@ export const Profile = () => {
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                       <input
                         type="text"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        value={formData.full_name}
+                        onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                         className="w-full bg-gray-700 text-white pl-10 pr-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
                       />
                     </div>
@@ -123,10 +220,10 @@ export const Profile = () => {
                     </div>
                   </div>
 
-                  <Button type="submit" variant="primary" className="w-full">
+                  <Button type="button" variant="primary" className="w-full" onClick={saveProfile}>
                     Save Changes
                   </Button>
-                </motion.form>
+                </motion.div>
               )}
 
               <div className="bg-gray-800 rounded-lg p-6 mt-6">
@@ -141,7 +238,7 @@ export const Profile = () => {
                   <button className="w-full text-left px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-white transition-colors">
                     Privacy Settings
                   </button>
-                  <button className="w-full text-left px-4 py-3 bg-red-600/10 hover:bg-red-600/20 rounded-lg text-red-400 transition-colors">
+                  <button className="w-full text-left px-4 py-3 bg-red-600/10 hover:bg-red-600/20 rounded-lg text-red-400 transition-colors" onClick={deleteAccount}>
                     Delete Account
                   </button>
                 </div>

@@ -2,9 +2,14 @@ import { Navigate, Outlet } from "react-router-dom";
 import { useStore } from "../store/useStore";
 
 export const ProtectedRoute = ({ allowedRoles }) => {
-  const { user } = useStore();
+  const { user, justLoggedOut } = useStore();
 
   if (!user) {
+    if (justLoggedOut) {
+      return <Navigate to="/" replace />;
+    }
+
+    // If direct access without login → go login
     return <Navigate to="/login" replace />;
   }
 

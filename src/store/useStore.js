@@ -11,7 +11,16 @@ export const useStore = create(
         set({
           user,
           isAuthenticated: true,
+          justLoggedOut: false,
         }),
+
+        updateUser: (updatedFields) =>
+        set((state) => ({
+          user: {
+            ...state.user,
+            ...updatedFields,
+          },
+        })),
 
       logout: () => {
         localStorage.removeItem("auth_token");
@@ -19,6 +28,7 @@ export const useStore = create(
         set({
           user: null,
           isAuthenticated: false,
+          justLoggedOut: true,
         });
 
         useStore.persist.clearStorage();
