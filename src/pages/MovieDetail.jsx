@@ -22,6 +22,8 @@ import { Button } from "../components/Button";
 import * as movieService from "../services/movieService";
 import { StarRating } from "../components/Rating";
 import { addReview } from "../services/reviewService";
+import { addtoWatchlist, deleteFromWatchlist, getWatchlist } from "../services/watchlistService";
+import toast, { Toaster } from "react-hot-toast";
 
 // --- Countdown Component ---
 const CountdownTimer = ({ targetDate }) => {
@@ -69,11 +71,11 @@ export const MovieDetail = () => {
   const [loading, setLoading] = useState(true);
   const [trailerOpen, setTrailerOpen] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
-
+  const [watchlist, setWatchlist] = useState([]);
+  const [loadingWatchlist, setLoadingWatchlist] = useState(false);
 
   const {
     isAuthenticated,
-    isInWatchlist,
     isInFavorites,
     addToWatchlist,
     removeFromWatchlist,
@@ -84,21 +86,66 @@ export const MovieDetail = () => {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      try {
-        const movieRes = await movieService.getMovieById(id);
 
-        console.log("movie data", movieRes.data);
-        setMovie(movieRes.data);
-        setReviews(movieRes.data.Review);
+      try {
+        const promises = [movieService.getMovieById(id)];
+
+        if (isAuthenticated) {
+          promises.push(getWatchlist());
+        }
+
+        const results = await Promise.allSettled(promises);
+
+        // Movie always first
+        if (results[0].status === "fulfilled") {
+          setMovie(results[0].value.data);
+          setReviews(results[0].value.data.Review);
+        }
+
+        // Watchlist only if authenticated
+        if (isAuthenticated && results[1]?.status === "fulfilled") {
+          setWatchlist(results[1].value.data || []);
+        }
+
       } catch (error) {
-        console.error("Error fetching movie:", error);
+        console.error("Error fetching data:", error);
       } finally {
         setLoading(false);
       }
     };
+
     fetchData();
     window.scrollTo(0, 0);
-  }, [id]);
+  }, [id, isAuthenticated]);
+
+  const isInWatchlist = (movieId) => {
+    return watchlist.some((item) => item.movieId === movieId);
+  };
+
+  const handleWatchlistToggle = async () => {
+    try {
+      if (isInWatchlist(movie.id)) {
+        // Find correct watchlist item ID
+        const item = watchlist.find((w) => w.movieId === movie.id);
+
+        await deleteFromWatchlist(item.id);
+
+        setWatchlist((prev) =>
+          prev.filter((w) => w.movieId !== movie.id)
+        );
+
+        toast.success("Removed from watchlist");
+      } else {
+        const res = await addtoWatchlist({ movieId: Number(movie.id) });
+
+        setWatchlist((prev) => [...prev, res.watchlistItem]);
+
+        toast.success("Added to watchlist");
+      }
+    } catch (err) {
+      toast.error(err.message || "Something went wrong");
+    }
+  };
 
   if (loading) return <DetailSkeleton />;
   if (!movie)
@@ -124,6 +171,7 @@ export const MovieDetail = () => {
 
   return (
     <div className="min-h-screen bg-black text-white pb-20">
+      <Toaster position="top-center" />
       {/* Header Section */}
       <div className="bg-[#1a1a1a] pt-24 pb-8 border-b border-white/5">
         <div className="container mx-auto px-4 md:px-8">
@@ -321,25 +369,23 @@ export const MovieDetail = () => {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* <Button
-              onClick={() =>
-                isInWatchlist(movie.id)
-                  ? removeFromWatchlist(movie.id)
-                  : addToWatchlist(movie)
-              }
-              className={`w-full py-4 rounded-sm font-black uppercase tracking-widest text-xs transition-all ${
-                isInWatchlist(movie.id)
+            {isAuthenticated &&
+              <Button
+                onClick={handleWatchlistToggle}
+                disabled={loadingWatchlist}
+                className={`w-full py-4 rounded-sm font-black uppercase tracking-widest text-xs transition-all ${isInWatchlist(movie.id)
                   ? "bg-[#333] text-white"
                   : "bg-blue-600 text-black hover:bg-blue-700"
-              }`}
-            >
-              {isInWatchlist(movie.id) ? (
-                <Bookmark className="mr-2 fill-current w-4 h-4" />
-              ) : (
-                <Plus className="mr-2 w-4 h-4" />
-              )}
-              {isInWatchlist(movie.id) ? "In Watchlist" : "Add to Watchlist"}
-            </Button> */}
+                  }`}
+              >
+                {isInWatchlist(movie.id) ? (
+                  <Bookmark className="mr-2 fill-current w-4 h-4" />
+                ) : (
+                  <Plus className="mr-2 w-4 h-4" />
+                )}
+                {isInWatchlist(movie.id) ? "In Watchlist" : "Add to Watchlist"}
+              </Button>
+            }
 
             {/* Stats */}
             <div className="bg-[#121212] p-6 border border-white/5 space-y-6">

@@ -5,27 +5,25 @@ import { api } from '../services/api';
 import { useStore } from '../store/useStore';
 import { MovieCard } from '../components/MovieCard';
 import { CardSkeleton } from '../components/LoadingSkeleton';
+import { getWatchlist } from '../services/watchlistService';
 
 export const Watchlist = () => {
-  const { user, watchlist, favorites } = useStore();
+  const { user } = useStore();
   const [activeTab, setActiveTab] = useState('watchlist');
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchMovies();
-  }, [activeTab, watchlist, favorites]);
+  }, [activeTab]);
 
   const fetchMovies = async () => {
     setLoading(true);
     try {
       if (activeTab === 'watchlist') {
-        const res = await api.user.getWatchlist();
+        const res = await getWatchlist();
         setMovies(res.data);
-      } else {
-        const res = await api.user.getFavorites();
-        setMovies(res.data);
-      }
+      } 
     } catch (error) {
       console.error('Error fetching movies:', error);
     } finally {
@@ -63,9 +61,9 @@ export const Watchlist = () => {
               }`}
             >
               <Bookmark className="w-5 h-5" />
-              Watchlist ({watchlist.length})
+              Watchlist ({movies.length})
             </button>
-            <button
+            {/* <button
               onClick={() => setActiveTab('favorites')}
               className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
                 activeTab === 'favorites'
@@ -75,7 +73,7 @@ export const Watchlist = () => {
             >
               <Heart className="w-5 h-5" />
               Favorites ({favorites.length})
-            </button>
+            </button> */}
           </div>
 
           {loading ? (
@@ -87,7 +85,7 @@ export const Watchlist = () => {
           ) : movies.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
               {movies.map((movie) => (
-                <MovieCard key={movie.id} movie={movie} />
+                <MovieCard key={movie.id} movie={movie.movie} />
               ))}
             </div>
           ) : (
